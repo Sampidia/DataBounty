@@ -24,7 +24,7 @@ export default function Navbar({
   openWithdrawModal,
 }: NavbarProps) {
   const pathname = usePathname();
-  const { user, role, isAuthenticated, openAuthModal, logout, login } = useAuth();
+  const { user, role, isAuthenticated, openAuthModal, logout, login, updateUser } = useAuth();
 
   const activeRole = propRole || role;
   const balance = propWalletBalance !== undefined ? propWalletBalance : (user?.walletBalance || 0);
@@ -34,7 +34,7 @@ export default function Navbar({
       propSetRole(newRole);
     }
     if (isAuthenticated) {
-      login(newRole, user?.email, user?.name);
+      updateUser({ role: newRole });
     } else {
       openAuthModal(newRole);
     }
@@ -176,7 +176,7 @@ export default function Navbar({
               Log In
             </button>
           )}
-        </div>
+        </nav>
       </div>
     </header>
   );

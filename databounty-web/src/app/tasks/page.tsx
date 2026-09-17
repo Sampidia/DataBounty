@@ -11,9 +11,23 @@ import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
 import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle } from 'lucide-react';
 
 export default function TasksPage() {
-  const { user, isAuthenticated, openAuthModal } = useAuth();
+  const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [tasks, setTasks] = useState<BountyTask[]>(INITIAL_TASKS);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<BountyTask | null>(null);
+  const [timerSeconds, setTimerSeconds] = useState<number>(900);
+  const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [stateFilter, setStateFilter] = useState<string>('all');
+  const [genderFilter, setGenderFilter] = useState<string>('all');
+  const [proofUrl, setProofUrl] = useState<string>('');
+  const [bugTitle, setBugTitle] = useState<string>('');
+  const [bugDescription, setBugDescription] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const userState = user?.state || 'Lagos';
+  const userGender = user?.gender || 'Female';
 
   useEffect(() => {
     fetchTasksFromFirestore().then((loadedTasks) => {
@@ -22,6 +36,33 @@ export default function TasksPage() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    let timer: any;
+    if (isTimerRunning && timerSeconds > 0) {
+      timer = setInterval(() => {
+        setTimerSeconds((prev) => prev - 1);
+      }, 1000);
+    } else if (timerSeconds === 0) {
+      setIsTimerRunning(false);
+      setSelectedTask(null);
+      alert('Reservation timer expired! Spot released.');
+    }
+    return () => clearInterval(timer);
+  }, [isTimerRunning, timerSeconds]);
+
+  const filteredTasks = tasks.filter((task) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchTitle = task.title.toLowerCase().includes(q);
+      const matchDesc = task.description.toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc) return false;
+    }
+    if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
+    if (stateFilter !== 'all' && task.targetState !== 'all' && task.targetState !== stateFilter) return false;
+    if (genderFilter !== 'all' && task.targetGender !== 'All' && task.targetGender !== genderFilter) return false;
+    return true;
+  });
 
   const handleOpenTask = (task: BountyTask) => {
     if (!isAuthenticated) {

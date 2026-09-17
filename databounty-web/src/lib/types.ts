@@ -2,7 +2,7 @@ export type UserRole = 'creator' | 'tester' | 'admin';
 
 export type TaskCategory = 'google_form' | 'app_test' | 'web_bug';
 
-export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
+export type SubmissionStatus = 'pending' | 'pending_verification' | 'approved' | 'rejected';
 
 export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
 

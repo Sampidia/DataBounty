@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           name: email.split('@')[0],
           email: email,
           phone: '+2340000000000',
-          gender: 'All',
+          gender: 'Female',
           country: 'Nigeria',
           state: 'Lagos',
           deviceBrand: 'Android Device',

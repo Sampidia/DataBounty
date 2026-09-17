@@ -15,8 +15,14 @@ export const metadata: Metadata = {
   description: "Empowering Nigerian testers and creators. Post bounties, complete micro-tasks, test apps, and earn naira securely with instant escrow settlement.",
   keywords: ["DataBounty", "QA Testing Nigeria", "Earn Money Online Nigeria", "Micro Tasks", "App Testing", "Tester Escrow", "Flutterwave Escrow"],
   icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
   },
   openGraph: {
     title: "DataBounty - Micro-Tasking & QA Testing Platform",
