@@ -1,10 +1,12 @@
 implementation plan:  /home/afigo/.gemini/antigravity-ide/brain/f0e2b368-40db-47bb-a5ef-6490aa99f1e4/implementation_plan.md
 
+Admin: https://databounty.sampidia.com/data
+
 Github: https://github.com/Sampidia/DataBounty.git
 
 step 1: git init
 step 2: git add .
-step 3: git commit -am  "Initial Version 0.0.01"
+step 3: git commit -am  "Initial Version 0.0.02"
 step 4: git remote add origin https://github.com/Sampidia/DataBounty.git
 step 5: git push origin master
 

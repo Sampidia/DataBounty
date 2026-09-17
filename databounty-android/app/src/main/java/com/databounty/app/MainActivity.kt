@@ -58,7 +58,7 @@ fun MainAppScreen() {
                 bankName = "GTBank",
                 accountNumber = "0123456789",
                 accountName = "AMINA BELLO",
-                walletBalance = 4500.0
+                walletBalance = 0.0
             )
         )
     }
@@ -74,7 +74,7 @@ fun MainAppScreen() {
                     category = TaskCategory.GOOGLE_FORM,
                     rewardPerUser = 500,
                     totalSpots = 50,
-                    completedSpots = 32,
+                    completedSpots = 0,
                     targetCountry = "Nigeria",
                     targetState = "All",
                     targetGender = "All",
@@ -88,7 +88,7 @@ fun MainAppScreen() {
                     category = TaskCategory.APP_TEST,
                     rewardPerUser = 1200,
                     totalSpots = 20,
-                    completedSpots = 14,
+                    completedSpots = 0,
                     targetCountry = "Nigeria",
                     targetState = "Lagos",
                     targetGender = "Female",
@@ -98,25 +98,7 @@ fun MainAppScreen() {
         )
     }
 
-    var withdrawals by remember {
-        mutableStateOf(
-            listOf(
-                WithdrawalRequest(
-                    id = "wd_7002",
-                    userId = currentUser.id,
-                    userName = currentUser.name,
-                    amount = 3000,
-                    fee = 50,
-                    netAmount = 2950,
-                    bankName = currentUser.bankName,
-                    accountNumber = currentUser.accountNumber,
-                    accountName = currentUser.accountName,
-                    status = WithdrawalStatus.PENDING,
-                    requestedAt = "Today 17:10"
-                )
-            )
-        )
-    }
+    var withdrawals by remember { mutableStateOf<List<WithdrawalRequest>>(emptyList()) }
 
     Scaffold(
         bottomBar = {
@@ -168,21 +150,6 @@ fun MainAppScreen() {
                         indicatorColor = Color(0xFF1F2937)
                     )
                 )
-
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Shield, contentDescription = "Admin") },
-                    label = { Text("Admin") },
-                    selected = currentScreen == "admin",
-                    onClick = {
-                        currentScreen = "admin"
-                        navController.navigate("admin")
-                    },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = EmeraldPrimary,
-                        selectedTextColor = EmeraldPrimary,
-                        indicatorColor = Color(0xFF1F2937)
-                    )
-                )
             }
         },
         containerColor = Color(0xFF0B0F17)
@@ -200,7 +167,6 @@ fun MainAppScreen() {
                         tasks = tasks.map { t ->
                             if (t.id == completedTask.id) t.copy(completedSpots = t.completedSpots + 1) else t
                         }
-                        currentUser = currentUser.copy(walletBalance = currentUser.walletBalance + reward)
                     }
                 )
             }
@@ -210,7 +176,7 @@ fun MainAppScreen() {
                     user = currentUser,
                     onWithdrawRequested = { newWd ->
                         withdrawals = listOf(newWd) + withdrawals
-                        currentUser = currentUser.copy(walletBalance = currentUser.walletBalance - newWd.amount)
+                        currentUser = currentUser.copy(walletBalance = (currentUser.walletBalance - newWd.amount).coerceAtLeast(0.0))
                     }
                 )
             }
@@ -219,23 +185,6 @@ fun MainAppScreen() {
                 ProfileScreen(
                     user = currentUser,
                     onSaveProfile = { updated -> currentUser = updated }
-                )
-            }
-
-            composable("admin") {
-                AdminScreen(
-                    withdrawals = withdrawals,
-                    onStatusChanged = { id, newStatus ->
-                        withdrawals = withdrawals.map { w ->
-                            if (w.id == id) w.copy(status = newStatus) else w
-                        }
-                    },
-                    onBatchStatusChanged = { ids, newStatus ->
-                        val idSet = ids.toSet()
-                        withdrawals = withdrawals.map { w ->
-                            if (idSet.contains(w.id)) w.copy(status = newStatus) else w
-                        }
-                    }
                 )
             }
         }

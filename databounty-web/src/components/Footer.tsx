@@ -7,18 +7,20 @@ export default function Footer() {
   return (
     <footer className="border-t border-[#025BE5]/25 bg-[#031F51]/90 mt-20 text-slate-300 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           
           {/* Col 1: Platform Info */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <Image 
-                src="/Databounty_logo.webp" 
-                alt="DataBounty Logo" 
-                width={160} 
-                height={45} 
-                className="object-contain h-9 w-auto filter drop-shadow-[0_2px_8px_rgba(2,159,252,0.3)]"
-              />
+              <div className="relative px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-md inline-flex items-center">
+                <Image 
+                  src="/Databounty_logo.webp" 
+                  alt="DataBounty Logo" 
+                  width={200} 
+                  height={60} 
+                  className="object-contain h-10 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
+                />
+              </div>
             </div>
             <p className="text-slate-300 text-xs leading-relaxed">
               Nigeria’s premier micro-tasking & QA testing platform. Creators publish bounties for Google Forms, Mobile Apps, and Web testing. Testers earn Naira with instant verification.
@@ -31,37 +33,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Col 2: Fee Structure */}
-          <div>
-            <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-[#029FFC]" />
-              Transparent Fee Tiers
-            </h4>
-            <ul className="space-y-2 text-slate-300">
-              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
-                <span>Creator Task (₦100–₦9.9k):</span>
-                <strong className="text-[#029FFC]">₦50 Fee</strong>
-              </li>
-              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
-                <span>Creator Task (₦10k–₦49.9k):</span>
-                <strong className="text-[#029FFC]">₦100 Fee</strong>
-              </li>
-              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
-                <span>Creator Task (₦50k+):</span>
-                <strong className="text-[#029FFC]">₦500 Fee</strong>
-              </li>
-              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
-                <span>Tester Cashout (&lt;₦10k):</span>
-                <strong className="text-amber-300">₦50 Fee</strong>
-              </li>
-              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
-                <span>Tester Cashout (&ge;₦10k):</span>
-                <strong className="text-amber-300">₦100 Fee</strong>
-              </li>
-            </ul>
-          </div>
-
-          {/* Col 3: Quick Navigation */}
+          {/* Col 2: Quick Navigation */}
           <div>
             <h4 className="text-sm font-semibold text-white mb-3">Quick Navigation</h4>
             <ul className="space-y-2">
@@ -78,11 +50,6 @@ export default function Footer() {
               <li>
                 <Link href="/profile" className="hover:text-[#029FFC] transition-colors">
                   Profile & Bank Account Setup
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="hover:text-[#029FFC] transition-colors text-[#029FFC]">
-                  Admin Platform Revenue Suite
                 </Link>
               </li>
             </ul>

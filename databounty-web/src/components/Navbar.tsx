@@ -46,14 +46,14 @@ export default function Navbar({
         
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative h-10 w-36 sm:w-44 flex items-center">
+          <div className="relative h-12 px-3 py-1 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
             <Image 
               src="/Databounty_logo.webp" 
               alt="DataBounty Logo" 
-              width={180} 
-              height={50} 
+              width={200} 
+              height={60} 
               priority
-              className="object-contain h-9 w-auto filter drop-shadow-[0_2px_8px_rgba(2,159,252,0.3)] transition-transform group-hover:scale-105"
+              className="object-contain h-10 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
             />
           </div>
         </Link>
@@ -103,30 +103,11 @@ export default function Navbar({
             </Link>
           )}
 
-          {/* Admin Suite Link */}
-          {activeRole === 'admin' && (
-            <Link
-              href="/admin"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                pathname === '/admin'
-                  ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
-                  : 'text-slate-300 hover:text-[#029FFC] hover:bg-white/5'
-              }`}
-            >
-              <Shield className="w-4 h-4 text-[#029FFC]" />
-              Admin Suite
-            </Link>
-          )}
-        </nav>
-
-        {/* Right Section: Role Mode & Wallet & Auth */}
-        <div className="flex items-center gap-3">
-          
-          {/* Role Mode Selector Dropdown / Pill */}
+          {/* Role Mode Selector Pill (Tester & Creator only) */}
           <div className="flex items-center bg-[#011438] border border-[#025BE5]/30 rounded-xl p-1 text-xs">
             <button
               onClick={() => handleRoleChange('tester')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-3 py-1 rounded-lg font-bold transition-all ${
                 activeRole === 'tester'
                   ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
                   : 'text-slate-400 hover:text-white'
@@ -136,23 +117,13 @@ export default function Navbar({
             </button>
             <button
               onClick={() => handleRoleChange('creator')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
+              className={`px-3 py-1 rounded-lg font-bold transition-all ${
                 activeRole === 'creator'
                   ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               Creator
-            </button>
-            <button
-              onClick={() => handleRoleChange('admin')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-all ${
-                activeRole === 'admin'
-                  ? 'bg-[#0136BD] text-white shadow-md shadow-[#0136BD]/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Admin
             </button>
           </div>
 

@@ -70,25 +70,7 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Quick Stat Pill Highlights */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-8 border-t border-gray-800/80">
-              <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800">
-                <div className="text-xl font-black text-emerald-400">₦100</div>
-                <div className="text-[11px] text-gray-400">Min Cashout Threshold</div>
-              </div>
-              <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800">
-                <div className="text-xl font-black text-teal-400">36 States + FCT</div>
-                <div className="text-[11px] text-gray-400">Demographic Targeting</div>
-              </div>
-              <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800">
-                <div className="text-xl font-black text-cyan-400">Option 1 Webhook</div>
-                <div className="text-[11px] text-gray-400">Auto Form Payout</div>
-              </div>
-              <div className="p-3 bg-gray-900/60 rounded-xl border border-gray-800">
-                <div className="text-xl font-black text-purple-400">₦50 – ₦100</div>
-                <div className="text-[11px] text-gray-400">Transparent Fee Tier</div>
-              </div>
-            </div>
+
           </div>
         </section>
 

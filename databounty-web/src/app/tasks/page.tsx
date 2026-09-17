@@ -6,54 +6,29 @@ import Footer from '@/components/Footer';
 import TaskCard from '@/components/TaskCard';
 import WithdrawModal from '@/components/WithdrawModal';
 import { useAuth } from '@/lib/AuthContext';
-import { INITIAL_TASKS } from '@/lib/store';
-import { NIGERIAN_STATES, BountyTask } from '@/lib/types';
+import { INITIAL_TASKS, fetchTasksFromFirestore, submitTaskProofToFirestore } from '@/lib/store';
+import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
 import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle } from 'lucide-react';
 
 export default function TasksPage() {
-  const { user, updateUser } = useAuth();
+  const { user, isAuthenticated, openAuthModal } = useAuth();
   const [tasks, setTasks] = useState<BountyTask[]>(INITIAL_TASKS);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
-  const userState = user?.state || 'Lagos';
-  const userGender = user?.gender || 'Female';
-
-  // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [stateFilter, setStateFilter] = useState<string>(userState);
-  const [genderFilter, setGenderFilter] = useState<string>(userGender);
-
   useEffect(() => {
-    if (user) {
-      setStateFilter(user.state);
-      setGenderFilter(user.gender);
-    }
-  }, [user]);
-
-  // Modal State
-  const [selectedTask, setSelectedTask] = useState<BountyTask | null>(null);
-  const [timerSeconds, setTimerSeconds] = useState<number>(900); // 15 mins timer
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [proofUrl, setProofUrl] = useState('');
-  const [bugTitle, setBugTitle] = useState('');
-  const [bugDescription, setBugDescription] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Start Reservation Countdown Timer when modal opens
-  useEffect(() => {
-    let interval: any = null;
-    if (selectedTask && isTimerRunning && timerSeconds > 0) {
-      interval = setInterval(() => {
-        setTimerSeconds((prev) => prev - 1);
-      }, 1000);
-    } else if (timerSeconds === 0) {
-      setIsTimerRunning(false);
-    }
-    return () => clearInterval(interval);
-  }, [selectedTask, isTimerRunning, timerSeconds]);
+    fetchTasksFromFirestore().then((loadedTasks) => {
+      if (loadedTasks && loadedTasks.length > 0) {
+        setTasks(loadedTasks);
+      }
+    });
+  }, []);
 
   const handleOpenTask = (task: BountyTask) => {
+    if (!isAuthenticated) {
+      alert('Authentication required: Please sign in or register to claim bounties.');
+      openAuthModal('tester');
+      return;
+    }
     setSelectedTask(task);
     setTimerSeconds(900);
     setIsTimerRunning(true);
@@ -64,42 +39,55 @@ export default function TasksPage() {
     setIsTimerRunning(false);
   };
 
-  // Filter Tasks according to Search, Category, State, Gender
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          t.description.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-    
-    // Demographic Eligibility
-    const matchesState = stateFilter === 'all' || t.targetState === 'All' || t.targetState === stateFilter;
-    const matchesGender = genderFilter === 'all' || t.targetGender === 'All' || t.targetGender === genderFilter;
-
-    return matchesSearch && matchesCategory && matchesState && matchesGender;
-  });
-
-  const handleSubmitProof = (e: React.FormEvent) => {
+  const handleSubmitProof = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
 
+    if (!isAuthenticated || !user) {
+      alert('Authentication required: Please sign in or register to submit task proofs.');
+      openAuthModal('tester');
+      return;
+    }
+
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      
-      // Update Task completed spots
+
+    try {
+      const newSubmission: TaskSubmission = {
+        id: `sub_${Date.now()}`,
+        taskId: selectedTask.id,
+        taskTitle: selectedTask.title,
+        userId: user.id,
+        userName: user.name,
+        userState: user.state,
+        userGender: user.gender,
+        rewardAmount: selectedTask.rewardPerUser,
+        status: selectedTask.category === 'google_form' ? 'pending_verification' : 'pending',
+        proofUrl: proofUrl || 'Submitted proof link',
+        bugTitle: bugTitle || undefined,
+        bugDescription: bugDescription || undefined,
+        submittedAt: new Date().toISOString()
+      };
+
+      await submitTaskProofToFirestore(newSubmission);
+
+      // Increment completed spots count
       const updatedTasks = tasks.map((t) =>
         t.id === selectedTask.id ? { ...t, completedSpots: t.completedSpots + 1 } : t
       );
       setTasks(updatedTasks);
 
-      // Award User Wallet Balance
-      const reward = selectedTask.rewardPerUser;
-      if (user) {
-        updateUser({ walletBalance: (user.walletBalance || 0) + reward });
-      }
+      alert(
+        selectedTask.category === 'google_form'
+          ? `Submission received! Your form response is pending Option 1 Webhook verification. Wallet will be credited automatically upon confirmation.`
+          : `Submission received! Your proof has been submitted to the creator for verification.`
+      );
 
-      alert(`Submission successful! Reward of ₦${reward.toLocaleString()} added to your wallet.`);
       handleCloseTaskModal();
-    }, 1000);
+    } catch (err: any) {
+      alert(`Submission failed: ${err.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTimer = (sec: number) => {

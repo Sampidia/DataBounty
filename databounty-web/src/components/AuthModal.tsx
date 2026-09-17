@@ -3,28 +3,43 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
 import { UserRole } from '@/lib/types';
-import { X, Shield, UserCheck, Briefcase, Lock, Mail, User, Sparkles } from 'lucide-react';
+import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle } from 'lucide-react';
 
 export function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, authModalRole, login } = useAuth();
-  const [activeTab, setActiveTab] = useState<UserRole>(authModalRole || 'tester');
+  const { isAuthModalOpen, closeAuthModal, authModalRole, login, signup } = useAuth();
+  const [activeTab, setActiveTab] = useState<UserRole>(authModalRole === 'admin' ? 'tester' : (authModalRole || 'tester'));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Sync activeTab if modal is opened with specific role
   React.useEffect(() => {
     if (authModalRole) {
-      setActiveTab(authModalRole);
+      setActiveTab(authModalRole === 'admin' ? 'tester' : authModalRole);
     }
   }, [authModalRole, isAuthModalOpen]);
 
   if (!isAuthModalOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(activeTab, email || undefined, name || undefined);
+    setErrorMsg('');
+    setIsSubmitting(true);
+
+    try {
+      if (isSignUp) {
+        await signup(email, password, activeTab, name);
+      } else {
+        await login(email, password, activeTab);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Authentication failed. Please check your details.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -54,12 +69,12 @@ export function AuthModal() {
               {isSignUp ? 'Join DataBounty' : 'Welcome Back'}
             </h3>
             <p className="text-sm text-slate-300 mt-1">
-              Select your role to access your personalized workspace
+              Select your role to access your workspace
             </p>
           </div>
 
-          {/* Role Selector Tabs */}
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#011438] rounded-xl border border-[#025BE5]/20 mb-6">
+          {/* Role Selector Tabs (Only Tester & Creator) */}
+          <div className="grid grid-cols-2 gap-2 p-1 bg-[#011438] rounded-xl border border-[#025BE5]/20 mb-6">
             <button
               type="button"
               onClick={() => setActiveTab('tester')}
@@ -70,7 +85,7 @@ export function AuthModal() {
               }`}
             >
               <UserCheck className="w-3.5 h-3.5" />
-              Tester
+              Tester Mode
             </button>
 
             <button
@@ -83,22 +98,17 @@ export function AuthModal() {
               }`}
             >
               <Briefcase className="w-3.5 h-3.5" />
-              Creator
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('admin')}
-              className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-                activeTab === 'admin'
-                  ? 'bg-gradient-to-r from-[#0136BD] to-[#025BE5] text-white shadow-md'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Shield className="w-3.5 h-3.5" />
-              Admin
+              Creator Mode
             </button>
           </div>
+
+          {/* Error Alert Message */}
+          {errorMsg && (
+            <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2 text-xs text-red-300">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -132,13 +142,7 @@ export function AuthModal() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={
-                    activeTab === 'admin' 
-                      ? 'admin@databounty.sampidia.com' 
-                      : activeTab === 'creator' 
-                        ? 'creator@databounty.sampidia.com' 
-                        : 'tester@databounty.sampidia.com'
-                  }
+                  placeholder="john@gmail.com"
                   className="w-full pl-9 pr-4 py-2.5 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC] focus:ring-1 focus:ring-[#029FFC] transition-all"
                 />
               </div>
@@ -161,17 +165,13 @@ export function AuthModal() {
               </div>
             </div>
 
-            {/* Quick Demo Credentials Info */}
-            <div className="p-3 bg-[#025BE5]/10 rounded-xl border border-[#025BE5]/20 text-xs text-slate-300">
-              <span className="font-semibold text-[#029FFC]">Demo Access:</span> Any email/password will log you into the demo account as <span className="capitalize font-bold text-white">{activeTab}</span>.
-            </div>
-
             {/* Submit Button */}
             <button
               type="submit"
+              disabled={isSubmitting}
               className="w-full py-3 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-[#025BE5]/30 transition-all text-sm flex items-center justify-center gap-2"
             >
-              <span>{isSignUp ? `Register as ${activeTab}` : `Sign In as ${activeTab}`}</span>
+              <span>{isSubmitting ? 'Authenticating...' : isSignUp ? `Register as ${activeTab}` : `Sign In as ${activeTab}`}</span>
             </button>
           </form>
 
