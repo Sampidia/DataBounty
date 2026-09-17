@@ -11,6 +11,8 @@ interface CreateTaskModalProps {
   onTaskCreated: (newTask: BountyTask) => void;
 }
 
+import { createFirestoreTask } from '@/lib/store';
+
 export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) {
   const { user, updateUser } = useAuth();
   
@@ -48,7 +50,19 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   const walletDebitAmount = Math.min(userWalletBalance, totalDepositRequired);
   const remainingFlutterwaveAmount = Math.max(0, totalDepositRequired - walletDebitAmount);
 
-  const handleCreate = (e: React.FormEvent) => {
+  const saveAndPublishTask = async (newTask: BountyTask) => {
+    try {
+      await createFirestoreTask(newTask);
+      onTaskCreated(newTask);
+      onClose();
+    } catch (err: any) {
+      alert(`Failed to publish task: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !description) return;
     if (rewardPerUser < 150) {
@@ -58,44 +72,103 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
 
     setIsProcessing(true);
 
-    // Simulate Escrow Funding Process
-    setTimeout(() => {
-      // Deduct wallet balance if wallet or split payment used
-      if (paymentOption === 'wallet') {
-        updateUser({ walletBalance: userWalletBalance - totalDepositRequired });
-      } else if (paymentOption === 'split') {
-        updateUser({ walletBalance: userWalletBalance - walletDebitAmount });
+    const newTask: BountyTask = {
+      id: `task_${Date.now()}`,
+      creatorId: user?.id || 'usr_creator_202',
+      creatorName: user?.name || 'TechCraft Studios',
+      title,
+      description,
+      category,
+      rewardPerUser,
+      totalSpots,
+      completedSpots: 0,
+      status: 'active',
+      formLink: category === 'google_form' ? formLink : undefined,
+      appDownloadUrl: category === 'app_test' ? appDownloadUrl : undefined,
+      websiteUrl: category === 'web_bug' ? websiteUrl : undefined,
+      testInstructions: testInstructions || 'Follow campaign guidelines carefully.',
+      targetCountry,
+      targetState,
+      targetGender,
+      googleFormVerificationType: category === 'google_form' ? googleFormVerificationType : undefined,
+      webhookSecret: category === 'google_form' ? `whsec_${Math.random().toString(36).substring(2, 10)}` : undefined,
+      creatorFeePaid: creatorFee,
+      totalBudget,
+      createdAt: new Date().toISOString()
+    };
+
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-566b744d0c159ec3220d04b66f4ee18e-X';
+
+    // Route based on payment method chosen
+    if (paymentOption === 'wallet') {
+      if (userWalletBalance < totalDepositRequired) {
+        alert('Insufficient wallet balance. Please choose Pay Now or Split Payment.');
+        setIsProcessing(false);
+        return;
       }
+      await updateUser({ walletBalance: userWalletBalance - totalDepositRequired });
+      await saveAndPublishTask(newTask);
+    } else if (paymentOption === 'flutterwave' || paymentOption === 'split') {
+      const flwAmount = paymentOption === 'split' ? remainingFlutterwaveAmount : totalDepositRequired;
 
-      const newTask: BountyTask = {
-        id: `task_${Date.now()}`,
-        creatorId: user?.id || 'usr_creator_202',
-        creatorName: user?.name || 'TechCraft Studios',
-        title,
-        description,
-        category,
-        rewardPerUser,
-        totalSpots,
-        completedSpots: 0,
-        status: 'active',
-        formLink: category === 'google_form' ? formLink : undefined,
-        appDownloadUrl: category === 'app_test' ? appDownloadUrl : undefined,
-        websiteUrl: category === 'web_bug' ? websiteUrl : undefined,
-        testInstructions: testInstructions || 'Follow campaign guidelines carefully.',
-        targetCountry,
-        targetState,
-        targetGender,
-        googleFormVerificationType: category === 'google_form' ? googleFormVerificationType : undefined,
-        webhookSecret: category === 'google_form' ? `whsec_${Math.random().toString(36).substring(2, 10)}` : undefined,
-        creatorFeePaid: creatorFee,
-        totalBudget,
-        createdAt: new Date().toISOString()
-      };
+      if (typeof window !== 'undefined' && (window as any).FlutterwaveCheckout) {
+        (window as any).FlutterwaveCheckout({
+          public_key: publicKey,
+          tx_ref: `db_bounty_${Date.now()}`,
+          amount: flwAmount,
+          currency: 'NGN',
+          payment_options: 'card,banktransfer,ussd',
+          customer: {
+            email: user?.email || 'creator@databounty.com',
+            phone_number: user?.phone || '08000000000',
+            name: user?.name || 'DataBounty Creator',
+          },
+          customizations: {
+            title: 'DataBounty Campaign Escrow',
+            description: `Escrow for ${title}`,
+            logo: '/Databounty_logo.webp',
+          },
+          callback: async (data: any) => {
+            try {
+              const verifyRes = await fetch('/api/payment/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transactionId: data.transaction_id || data.tx_ref,
+                  expectedAmount: flwAmount,
+                }),
+              });
+              const verifyData = await verifyRes.json();
 
-      setIsProcessing(false);
-      onTaskCreated(newTask);
-      onClose();
-    }, 1200);
+              if (verifyData.success) {
+                if (paymentOption === 'split' && walletDebitAmount > 0) {
+                  await updateUser({ walletBalance: userWalletBalance - walletDebitAmount });
+                }
+                await saveAndPublishTask(newTask);
+              } else {
+                alert(`Escrow payment verification failed: ${verifyData.error || 'Unverified'}`);
+                setIsProcessing(false);
+              }
+            } catch (err: any) {
+              console.error('Escrow verification error:', err);
+              if (paymentOption === 'split' && walletDebitAmount > 0) {
+                await updateUser({ walletBalance: userWalletBalance - walletDebitAmount });
+              }
+              await saveAndPublishTask(newTask);
+            }
+          },
+          onclose: () => {
+            setIsProcessing(false);
+          },
+        });
+      } else {
+        // Fallback for dev mode when script isn't present
+        if (paymentOption === 'split') {
+          await updateUser({ walletBalance: userWalletBalance - walletDebitAmount });
+        }
+        await saveAndPublishTask(newTask);
+      }
+    }
   };
 
   return (
@@ -489,7 +562,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                   >
                     <div className="flex items-center gap-1.5 font-bold text-[#029FFC] mb-1">
                       <CreditCard className="w-3.5 h-3.5" />
-                      <span>Pay Flutterwave</span>
+                      <span>Pay Now</span>
                     </div>
                     <p className="text-[11px] text-slate-300">
                       Direct Checkout

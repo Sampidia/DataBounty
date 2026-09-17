@@ -46,14 +46,14 @@ export default function Navbar({
         
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative h-12 px-3 py-1 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
+          <div className="relative h-16 px-4 py-1 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
             <Image 
               src="/Databounty_logo.webp" 
               alt="DataBounty Logo" 
-              width={200} 
-              height={60} 
+              width={240} 
+              height={72} 
               priority
-              className="object-contain h-10 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
+              className="object-contain h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
             />
           </div>
         </Link>
@@ -103,29 +103,35 @@ export default function Navbar({
             </Link>
           )}
 
-          {/* Role Mode Selector Pill (Tester & Creator only) */}
-          <div className="flex items-center bg-[#011438] border border-[#025BE5]/30 rounded-xl p-1 text-xs">
-            <button
-              onClick={() => handleRoleChange('tester')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                activeRole === 'tester'
-                  ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Tester
-            </button>
-            <button
-              onClick={() => handleRoleChange('creator')}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                activeRole === 'creator'
-                  ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Creator
-            </button>
-          </div>
+          {/* Role Mode Selector Pill (Tester & Creator only for guests; active role badge when authenticated) */}
+          {!isAuthenticated ? (
+            <div className="flex items-center bg-[#011438] border border-[#025BE5]/30 rounded-xl p-1 text-xs">
+              <button
+                onClick={() => handleRoleChange('tester')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                  activeRole === 'tester'
+                    ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Tester
+              </button>
+              <button
+                onClick={() => handleRoleChange('creator')}
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${
+                  activeRole === 'creator'
+                    ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Creator
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center bg-[#011438] border border-[#025BE5]/30 rounded-xl px-3 py-1.5 text-xs font-bold text-[#029FFC] capitalize">
+              {role === 'creator' ? '⚡ Creator' : '🎯 Tester'}
+            </div>
+          )}
 
           {/* Wallet Balance Pill */}
           {isAuthenticated && (
@@ -137,8 +143,8 @@ export default function Navbar({
             </div>
           )}
 
-          {/* Quick Action Button depending on Role */}
-          {activeRole === 'creator' && openCreateTaskModal && (
+          {/* Quick Action Button depending on Role - Requires Authentication */}
+          {isAuthenticated && activeRole === 'creator' && openCreateTaskModal && (
             <button
               onClick={openCreateTaskModal}
               className="flex items-center gap-1.5 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold px-3.5 py-1.5 rounded-xl text-xs shadow-md shadow-[#025BE5]/30 transition-transform hover:scale-[1.02]"

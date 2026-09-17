@@ -81,6 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userSnap.exists()) {
         const profile = userSnap.data() as UserProfile;
+        if (targetRole && targetRole !== 'admin' && profile.role !== targetRole) {
+          profile.role = targetRole;
+          await updateDoc(userDocRef, { role: targetRole });
+        }
         setUser(profile);
         localStorage.setItem('databounty_auth_user', JSON.stringify(profile));
       } else {
@@ -96,8 +100,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           deviceBrand: 'Android Device',
           deviceModel: 'Generic Mobile',
           osVersion: 'Android 14',
-          bankName: 'Opay',
-          accountNumber: '0000000000',
+          bankName: '',
+          accountNumber: '',
           accountName: email.split('@')[0].toUpperCase(),
           walletBalance: 0,
           escrowBalance: 0,
@@ -125,8 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           deviceBrand: 'Samsung',
           deviceModel: 'Galaxy',
           osVersion: 'Android 14',
-          bankName: 'Opay',
-          accountNumber: '0123456789',
+          bankName: '',
+          accountNumber: '',
           accountName: email.split('@')[0].toUpperCase(),
           walletBalance: 0,
           escrowBalance: 0,
@@ -156,8 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deviceBrand: 'Mobile',
         deviceModel: 'Smartphone',
         osVersion: 'Android 14',
-        bankName: 'Opay',
-        accountNumber: '0000000000',
+        bankName: '',
+        accountNumber: '',
         accountName: (name || email.split('@')[0]).toUpperCase(),
         walletBalance: 0, // MUST start at 0
         escrowBalance: 0,
@@ -181,8 +185,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         deviceBrand: 'Mobile',
         deviceModel: 'Smartphone',
         osVersion: 'Android 14',
-        bankName: 'Opay',
-        accountNumber: '0000000000',
+        bankName: '',
+        accountNumber: '',
         accountName: (name || email.split('@')[0]).toUpperCase(),
         walletBalance: 0, // MUST start at 0
         escrowBalance: 0,

@@ -31,6 +31,8 @@ export const metadata: Metadata = {
   },
 };
 
+import Script from 'next/script';
+
 export default function RootLayout({
   children,
 }: {
@@ -43,6 +45,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#011438] text-white">
         <AuthProvider>
+          <Script src="https://checkout.flutterwave.com/v3.js" strategy="afterInteractive" />
           {children}
           <AuthModal />
         </AuthProvider>

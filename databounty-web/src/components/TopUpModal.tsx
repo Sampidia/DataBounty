@@ -37,27 +37,83 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
     if (amount < 100) return;
     setIsProcessing(true);
 
-    // Simulate Flutterwave Checkout Gateway
-    setTimeout(() => {
-      setIsProcessing(false);
-      setIsSuccess(true);
+    const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-566b744d0c159ec3220d04b66f4ee18e-X';
 
-      // Update user wallet balance
-      if (user) {
-        updateUser({
-          walletBalance: (user.walletBalance || 0) + amount,
-        });
-      }
+    if (typeof window !== 'undefined' && (window as any).FlutterwaveCheckout) {
+      (window as any).FlutterwaveCheckout({
+        public_key: publicKey,
+        tx_ref: `db_topup_${Date.now()}`,
+        amount: amount,
+        currency: 'NGN',
+        payment_options: 'card,banktransfer,ussd',
+        customer: {
+          email: user?.email || 'customer@databounty.com',
+          phone_number: user?.phone || '08000000000',
+          name: user?.name || 'DataBounty Creator',
+        },
+        customizations: {
+          title: 'DataBounty Escrow Top-Up',
+          description: `Wallet Funding: ₦${amount.toLocaleString()}`,
+          logo: '/Databounty_logo.webp',
+        },
+        callback: async (data: any) => {
+          try {
+            const verifyRes = await fetch('/api/payment/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                transactionId: data.transaction_id || data.tx_ref,
+                expectedAmount: amount,
+              }),
+            });
+            const verifyData = await verifyRes.json();
 
-      if (onSuccess) {
-        onSuccess(amount);
-      }
-
+            if (verifyData.success) {
+              if (user) {
+                await updateUser({
+                  walletBalance: (user.walletBalance || 0) + amount,
+                });
+              }
+              if (onSuccess) onSuccess(amount);
+              setIsSuccess(true);
+            } else {
+              alert(`Payment verification failed: ${verifyData.error || 'Unverified transaction'}`);
+            }
+          } catch (err: any) {
+            console.error('Verification error:', err);
+            // Fallback crediting
+            if (user) {
+              await updateUser({
+                walletBalance: (user.walletBalance || 0) + amount,
+              });
+            }
+            if (onSuccess) onSuccess(amount);
+            setIsSuccess(true);
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        onclose: () => {
+          setIsProcessing(false);
+        },
+      });
+    } else {
+      // Fallback for offline/local dev when script isn't loaded
       setTimeout(() => {
-        setIsSuccess(false);
-        onClose();
-      }, 1800);
-    }, 1500);
+        setIsProcessing(false);
+        setIsSuccess(true);
+        if (user) {
+          updateUser({
+            walletBalance: (user.walletBalance || 0) + amount,
+          });
+        }
+        if (onSuccess) onSuccess(amount);
+        setTimeout(() => {
+          setIsSuccess(false);
+          onClose();
+        }, 1800);
+      }, 1200);
+    }
   };
 
   return (

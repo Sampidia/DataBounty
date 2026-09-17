@@ -12,7 +12,8 @@ import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, Exter
 
 export default function TasksPage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
-  const [tasks, setTasks] = useState<BountyTask[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<BountyTask[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<BountyTask | null>(null);
   const [timerSeconds, setTimerSeconds] = useState<number>(900);
@@ -30,11 +31,14 @@ export default function TasksPage() {
   const userGender = user?.gender || 'Female';
 
   useEffect(() => {
-    fetchTasksFromFirestore().then((loadedTasks) => {
-      if (loadedTasks && loadedTasks.length > 0) {
-        setTasks(loadedTasks);
-      }
-    });
+    setIsLoading(true);
+    fetchTasksFromFirestore()
+      .then((loadedTasks) => {
+        setTasks(loadedTasks || []);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   useEffect(() => {
@@ -231,11 +235,16 @@ export default function TasksPage() {
             <span>Showing <strong>{filteredTasks.length}</strong> matching bounty campaigns</span>
           </div>
 
-          {filteredTasks.length === 0 ? (
+          {isLoading ? (
+            <div className="p-12 text-center glass-panel rounded-2xl border border-[#025BE5]/25 space-y-3">
+              <div className="w-8 h-8 border-2 border-[#029FFC] border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-slate-300 font-semibold">Fetching available bounties from database...</p>
+            </div>
+          ) : filteredTasks.length === 0 ? (
             <div className="p-12 text-center glass-panel rounded-2xl border border-[#025BE5]/25 space-y-3">
               <AlertCircle className="w-10 h-10 text-slate-500 mx-auto" />
-              <h3 className="text-base font-bold text-white">No Bounties Found</h3>
-              <p className="text-xs text-slate-400">Try relaxing your demographic filter criteria or search query.</p>
+              <h3 className="text-base font-bold text-white">No Live Bounties Available</h3>
+              <p className="text-xs text-slate-400">There are currently no active bounty campaigns matching your criteria. Check back soon!</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

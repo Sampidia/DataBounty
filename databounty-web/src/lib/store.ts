@@ -43,30 +43,7 @@ export const INITIAL_CREATOR: UserProfile = {
   role: 'creator'
 };
 
-export const INITIAL_TASKS: BountyTask[] = [
-  {
-    id: 'task_gf_001',
-    creatorId: 'usr_creator_202',
-    creatorName: 'TechCraft Studios',
-    title: 'Naija E-Commerce Shopping Habits Survey',
-    description: 'Provide feedback on online shopping preferences in Nigeria. High reward for detailed answers!',
-    category: 'google_form',
-    rewardPerUser: 500,
-    totalSpots: 50,
-    completedSpots: 0,
-    status: 'active',
-    formLink: 'https://docs.google.com/forms/d/e/1FAIpQLSc_example/viewform',
-    testInstructions: 'Fill out all 10 questions in the Google Form. Auto-verified upon submission via Option 1 Google Sheet webhook.',
-    targetCountry: 'Nigeria',
-    targetState: 'All',
-    targetGender: 'All',
-    googleFormVerificationType: 'option1_webhook',
-    webhookSecret: 'whsec_databounty_99812',
-    creatorFeePaid: 100,
-    totalBudget: 25000,
-    createdAt: new Date().toISOString()
-  }
-];
+export const INITIAL_TASKS: BountyTask[] = [];
 
 export const INITIAL_SUBMISSIONS: TaskSubmission[] = [];
 export const INITIAL_WITHDRAWALS: WithdrawalRequest[] = [];
@@ -85,7 +62,7 @@ export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
   } catch (err) {
     console.warn('[Firestore] fetchTasks error fallback:', err);
   }
-  return INITIAL_TASKS;
+  return [];
 }
 
 export async function createFirestoreTask(task: BountyTask): Promise<void> {

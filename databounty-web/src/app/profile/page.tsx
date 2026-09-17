@@ -7,7 +7,8 @@ import WithdrawModal from '@/components/WithdrawModal';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_TRANSACTIONS } from '@/lib/store';
 import { NIGERIAN_STATES, Transaction } from '@/lib/types';
-import { User, Wallet, ShieldCheck, CheckCircle2, Save, ArrowDownRight, ArrowUpRight, Smartphone, LogIn, Lock } from 'lucide-react';
+import { POPULAR_NIGERIAN_BANKS } from '@/lib/banks';
+import { User, Wallet, ShieldCheck, CheckCircle2, Save, ArrowDownRight, ArrowUpRight, Smartphone, LogIn, Lock, CreditCard, RefreshCw } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
@@ -15,7 +16,7 @@ export default function ProfilePage() {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
-  // Form State
+  // Profile Form State
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [gender, setGender] = useState<'Male' | 'Female'>(user?.gender || 'Male');
@@ -23,6 +24,13 @@ export default function ProfilePage() {
   const [deviceBrand, setDeviceBrand] = useState(user?.deviceBrand || 'Tecno');
   const [deviceModel, setDeviceModel] = useState(user?.deviceModel || 'Camon 20');
   const [osVersion, setOsVersion] = useState(user?.osVersion || 'Android 13');
+
+  // Bank / Payment Form State
+  const [bankName, setBankName] = useState(user?.bankName || 'Opay');
+  const [accountNumber, setAccountNumber] = useState(user?.accountNumber || '');
+  const [accountName, setAccountName] = useState(user?.accountName || '');
+  const [isResolvingBank, setIsResolvingBank] = useState(false);
+  const [bankVerified, setBankVerified] = useState(!!user?.accountName && user.accountName !== 'GUEST');
 
   useEffect(() => {
     if (user) {
@@ -33,8 +41,40 @@ export default function ProfilePage() {
       setDeviceBrand(user.deviceBrand);
       setDeviceModel(user.deviceModel);
       setOsVersion(user.osVersion);
+      setBankName(user.bankName || 'Opay');
+      setAccountNumber(user.accountNumber || '');
+      setAccountName(user.accountName || '');
+      if (user.accountName && user.accountName !== 'GUEST') {
+        setBankVerified(true);
+      }
     }
   }, [user]);
+
+  const handleResolveBank = async () => {
+    if (!bankName || accountNumber.length < 10) {
+      alert('Please select a bank and enter a 10-digit account number.');
+      return;
+    }
+    setIsResolvingBank(true);
+    try {
+      const res = await fetch('/api/bank/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bankName, accountNumber }),
+      });
+      const data = await res.json();
+      if (data.success && data.accountName) {
+        setAccountName(data.accountName);
+        setBankVerified(true);
+      } else {
+        alert(`Account resolution failed: ${data.error || 'Check bank & account number'}`);
+      }
+    } catch (err: any) {
+      alert(`Resolution error: ${err.message}`);
+    } finally {
+      setIsResolvingBank(false);
+    }
+  };
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +86,9 @@ export default function ProfilePage() {
       deviceBrand,
       deviceModel,
       osVersion,
+      bankName,
+      accountNumber,
+      accountName,
     });
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
@@ -237,6 +280,74 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  {/* Bank & Payment Details Section */}
+                  <div className="pt-3 border-t border-[#025BE5]/20 space-y-3">
+                    <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                      <CreditCard className="w-4 h-4 text-[#029FFC]" />
+                      Withdrawal Payout Bank Account
+                    </h4>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">Select Bank</label>
+                        <select
+                          value={bankName}
+                          onChange={(e) => {
+                            setBankName(e.target.value);
+                            setBankVerified(false);
+                            setAccountName('');
+                          }}
+                          className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                        >
+                          {POPULAR_NIGERIAN_BANKS.map((b) => (
+                            <option key={b.code} value={b.name}>
+                              {b.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] text-slate-400 mb-1">10-Digit NUBAN Account Number</label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            maxLength={10}
+                            value={accountNumber}
+                            onChange={(e) => {
+                              setAccountNumber(e.target.value);
+                              setBankVerified(false);
+                              setAccountName('');
+                            }}
+                            placeholder="0123456789"
+                            className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleResolveBank}
+                            disabled={isResolvingBank || accountNumber.length < 10}
+                            className="px-3 py-1.5 bg-[#025BE5]/20 hover:bg-[#025BE5]/30 border border-[#025BE5]/40 text-[#029FFC] font-bold text-xs rounded-lg whitespace-nowrap disabled:opacity-40 flex items-center gap-1"
+                          >
+                            {isResolvingBank ? (
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                            ) : bankVerified ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            ) : (
+                              'Verify'
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {accountName && (
+                      <div className="p-2.5 bg-[#011438] border border-emerald-500/30 rounded-lg flex items-center justify-between text-xs">
+                        <span className="text-slate-400">Account Name:</span>
+                        <strong className="text-emerald-400 font-bold">{accountName}</strong>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="pt-2">
                     <button
                       type="submit"
@@ -316,8 +427,13 @@ export default function ProfilePage() {
           isOpen={isWithdrawModalOpen}
           onClose={() => setIsWithdrawModalOpen(false)}
           user={user}
-          onWithdrawSubmitted={(wd) => {
-            updateUser({ walletBalance: user.walletBalance - wd.amount });
+          onWithdrawSubmitted={async (wd) => {
+            await updateUser({
+              walletBalance: user.walletBalance - wd.amount,
+              bankName: wd.bankName,
+              accountNumber: wd.accountNumber,
+              accountName: wd.accountName,
+            });
             setTransactions([
               {
                 id: `tx_${Date.now()}`,

@@ -44,7 +44,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback mode if FLUTTERWAVE_SECRET_KEY is not yet configured in env
+    // Fallback mode when FLUTTERWAVE_SECRET_KEY is not configured (dev only)
+    // NOTE: Set FLUTTERWAVE_SECRET_KEY in your env for real account resolution in production.
     if (accountNumber === '0000000000' || accountNumber === '1111111111') {
       return NextResponse.json(
         { success: false, error: 'invalid withdrawal details' },
@@ -55,9 +56,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       accountNumber,
-      accountName: 'AMINA BELLO',
+      accountName: '[DEV MODE] Test Account',
       bankCode: bankCode || '100004',
-      message: 'Account resolved (Development Fallback Mode)',
+      message: 'Account resolved (Development Fallback — configure FLUTTERWAVE_SECRET_KEY for production)',
     });
   } catch (err: any) {
     return NextResponse.json(

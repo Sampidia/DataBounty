@@ -6,7 +6,7 @@ import { UserRole } from '@/lib/types';
 import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle } from 'lucide-react';
 
 export function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, authModalRole, login, signup } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, authModalRole, login, signup, user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<UserRole>(authModalRole === 'admin' ? 'tester' : (authModalRole || 'tester'));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -102,13 +102,42 @@ export function AuthModal() {
             </button>
           </div>
 
-          {/* Error Alert Message */}
-          {errorMsg && (
-            <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2 text-xs text-red-300">
-              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <span>{errorMsg}</span>
+          {/* Prompt for already authenticated users trying to switch modes */}
+          {user && user.role !== activeTab ? (
+            <div className="p-4 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-center space-y-3 mb-4">
+              <p className="text-xs text-slate-300">
+                You are currently logged in as a <strong className="text-white capitalize">{user.role}</strong> ({user.email}).
+                Do you want to switch your account role to <strong className="text-[#029FFC] capitalize">{activeTab}</strong>?
+              </p>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await updateUser({ role: activeTab });
+                    closeAuthModal();
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-[#025BE5] to-[#029FFC] text-white font-bold rounded-lg text-xs shadow-md"
+                >
+                  Switch Role to {activeTab}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeAuthModal}
+                  className="px-3 py-2 bg-slate-800 text-slate-300 hover:text-white rounded-lg text-xs font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-          )}
+          ) : (
+            <>
+              {/* Error Alert Message */}
+              {errorMsg && (
+                <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2 text-xs text-red-300">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -201,6 +230,8 @@ export function AuthModal() {
               </p>
             )}
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

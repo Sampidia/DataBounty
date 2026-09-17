@@ -1,22 +1,48 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TaskCard from '@/components/TaskCard';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import WithdrawModal from '@/components/WithdrawModal';
-import { INITIAL_USER, INITIAL_TASKS } from '@/lib/store';
+import { useAuth } from '@/lib/AuthContext';
+import { fetchTasksFromFirestore } from '@/lib/store';
 import { UserRole, BountyTask } from '@/lib/types';
-import { ArrowRight, ShieldCheck, FileSpreadsheet, Smartphone, Globe, CheckCircle2, Wallet, Users, Zap, Mail, BarChart3 } from 'lucide-react';
+import { ArrowRight, ShieldCheck, FileSpreadsheet, Smartphone, Globe, CheckCircle2, Wallet, Users, Zap, Mail, BarChart3, AlertCircle } from 'lucide-react';
 
 export default function Home() {
+  const { user: authUser, updateUser } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>('tester');
-  const [tasks, setTasks] = useState<BountyTask[]>(INITIAL_TASKS);
-  const [user, setUser] = useState(INITIAL_USER);
+  const [tasks, setTasks] = useState<BountyTask[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
+
+  useEffect(() => {
+    fetchTasksFromFirestore().then((loaded) => {
+      if (loaded) setTasks(loaded);
+    });
+  }, []);
+
+  const activeUser = authUser || {
+    id: 'usr_guest',
+    name: 'Guest User',
+    email: '',
+    phone: '',
+    gender: 'Female' as const,
+    country: 'Nigeria',
+    state: 'Lagos',
+    deviceBrand: 'Mobile',
+    deviceModel: 'Device',
+    osVersion: 'Android 14',
+    bankName: '',
+    accountNumber: '',
+    accountName: 'GUEST',
+    walletBalance: 0,
+    escrowBalance: 0,
+    role: 'tester' as const,
+  };
 
   const handleTaskCreated = (newTask: BountyTask) => {
     setTasks([newTask, ...tasks]);
@@ -27,7 +53,7 @@ export default function Home() {
       <Navbar
         currentRole={userRole}
         setRole={setUserRole}
-        walletBalance={user.walletBalance}
+        walletBalance={activeUser.walletBalance}
         openCreateTaskModal={() => setIsCreateModalOpen(true)}
         openWithdrawModal={() => setIsWithdrawModalOpen(true)}
       />
@@ -134,19 +160,27 @@ export default function Home() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {tasks.slice(0, 3).map((task) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onSelectTask={() => {
-                  window.location.href = '/tasks';
-                }}
-                userState={user.state}
-                userGender={user.gender}
-              />
-            ))}
-          </div>
+          {tasks.length === 0 ? (
+            <div className="p-8 text-center glass-panel rounded-2xl border border-gray-800 space-y-2">
+              <AlertCircle className="w-8 h-8 text-gray-500 mx-auto" />
+              <h3 className="text-sm font-bold text-white">No Live Bounties Right Now</h3>
+              <p className="text-xs text-gray-400">Be the first campaign creator to publish a task!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {tasks.slice(0, 3).map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onSelectTask={() => {
+                    window.location.href = '/tasks';
+                  }}
+                  userState={activeUser.state}
+                  userGender={activeUser.gender}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
         {/* TRANSPARENT FEE STRUCTURE BANNER */}
@@ -212,9 +246,16 @@ export default function Home() {
       <WithdrawModal
         isOpen={isWithdrawModalOpen}
         onClose={() => setIsWithdrawModalOpen(false)}
-        user={user}
-        onWithdrawSubmitted={(wd) => {
-          setUser({ ...user, walletBalance: user.walletBalance - wd.amount });
+        user={activeUser}
+        onWithdrawSubmitted={async (wd) => {
+          if (authUser) {
+            await updateUser({
+              walletBalance: activeUser.walletBalance - wd.amount,
+              bankName: wd.bankName,
+              accountNumber: wd.accountNumber,
+              accountName: wd.accountName,
+            });
+          }
           alert(`Withdrawal request for ₦${wd.netAmount.toLocaleString()} submitted! Admin notified.`);
         }}
       />

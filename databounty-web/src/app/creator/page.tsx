@@ -1,13 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import { TopUpModal } from '@/components/TopUpModal';
 import { useAuth } from '@/lib/AuthContext';
-import { INITIAL_TASKS, INITIAL_SUBMISSIONS } from '@/lib/store';
+import { INITIAL_SUBMISSIONS } from '@/lib/store';
 import { BountyTask } from '@/lib/types';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
@@ -15,12 +17,38 @@ import {
 import { BarChart3, PlusCircle, Wallet, CheckCircle2, Clock, Users, MapPin, Sparkles, LogIn, Lock } from 'lucide-react';
 
 export default function CreatorDashboard() {
-  const { user, role, isAuthenticated, openAuthModal } = useAuth();
-  const [tasks, setTasks] = useState<BountyTask[]>(INITIAL_TASKS);
+  const { user, role, isAuthenticated, openAuthModal, updateUser } = useAuth();
+  const [tasks, setTasks] = useState<BountyTask[]>([]);
   const [submissions] = useState(INITIAL_SUBMISSIONS);
+  const [isLoadingTasks, setIsLoadingTasks] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+
+  // Fetch creator's tasks from Firestore
+  useEffect(() => {
+    if (user?.id) {
+      setIsLoadingTasks(true);
+      const fetchCreatorTasks = async () => {
+        try {
+          const tasksRef = collection(db, 'tasks');
+          const q = query(tasksRef, where('creatorId', '==', user.id));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
+            setTasks(loaded);
+          } else {
+            setTasks([]);
+          }
+        } catch (err) {
+          console.warn('[CreatorDashboard] Firestore fetch error:', err);
+        } finally {
+          setIsLoadingTasks(false);
+        }
+      };
+      fetchCreatorTasks();
+    }
+  }, [user?.id]);
 
   // Compute metrics
   const activeTasksCount = tasks.filter((t) => t.status === 'active').length;
@@ -65,15 +93,29 @@ export default function CreatorDashboard() {
             </div>
             <h2 className="text-2xl font-bold text-white">Creator Dashboard Locked</h2>
             <p className="text-sm text-slate-300">
-              Please sign in as a Creator or Admin to publish bounty campaigns and track analytics.
+              {isAuthenticated
+                ? "Your current account is set to Tester mode. Switch your account role to Creator to publish campaigns."
+                : "Please sign in as a Creator or Admin to publish bounty campaigns and track analytics."}
             </p>
-            <button
-              onClick={() => openAuthModal('creator')}
-              className="w-full py-3 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-[#025BE5]/30 transition-all text-sm flex items-center justify-center gap-2"
-            >
-              <LogIn className="w-4 h-4" />
-              <span>Sign In as Creator</span>
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={async () => {
+                  await updateUser({ role: 'creator' });
+                }}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-[#025BE5]/30 transition-all text-sm flex items-center justify-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Switch Role to Creator</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => openAuthModal('creator')}
+                className="w-full py-3 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl shadow-lg shadow-[#025BE5]/30 transition-all text-sm flex items-center justify-center gap-2"
+              >
+                <LogIn className="w-4 h-4" />
+                <span>Sign In as Creator</span>
+              </button>
+            )}
           </div>
         ) : (
           <>

@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     if (!email || email.trim().toLowerCase() !== adminEmail) {
       return NextResponse.json(
-        { error: 'Unauthorized: Admin access is restricted to the designated ADMIN_EMAIL.' },
+        { error: 'Unauthorized: Access is restricted to the designated Admin.' },
         { status: 403 }
       );
     }

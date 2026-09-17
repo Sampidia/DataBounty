@@ -189,7 +189,7 @@ export default function AdminDashboardClient() {
               </div>
               <h2 className="text-2xl font-extrabold tracking-tight">Restricted Master Admin Suite</h2>
               <p className="text-xs text-slate-300">
-                Access is restricted strictly to the designated <code className="text-[#029FFC]">ADMIN_EMAIL</code>.
+                Access is restricted strictly to the designated <strong className="text-[#029FFC]">Admin</strong>.
               </p>
             </div>
 
