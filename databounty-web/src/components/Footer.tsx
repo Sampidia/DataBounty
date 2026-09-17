@@ -1,26 +1,30 @@
 import React from 'react';
 import Link from 'next/link';
-import { Mail, ShieldCheck, HeartHandshake, HelpCircle } from 'lucide-react';
+import Image from 'next/image';
+import { Mail, ShieldCheck, HeartHandshake } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="border-t border-gray-800 bg-gray-950/80 mt-20 text-gray-400 text-xs">
+    <footer className="border-t border-[#025BE5]/25 bg-[#031F51]/90 mt-20 text-slate-300 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           
           {/* Col 1: Platform Info */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-extrabold text-sm">
-                DB
-              </div>
-              <span className="text-lg font-bold text-white">DataBounty</span>
+              <Image 
+                src="/Databounty_logo.webp" 
+                alt="DataBounty Logo" 
+                width={160} 
+                height={45} 
+                className="object-contain h-9 w-auto filter drop-shadow-[0_2px_8px_rgba(2,159,252,0.3)]"
+              />
             </div>
-            <p className="text-gray-400 text-xs leading-relaxed">
+            <p className="text-slate-300 text-xs leading-relaxed">
               Nigeria’s premier micro-tasking & QA testing platform. Creators publish bounties for Google Forms, Mobile Apps, and Web testing. Testers earn Naira with instant verification.
             </p>
-            <div className="pt-1 flex items-center gap-2 text-emerald-400 font-medium">
-              <Mail className="w-4 h-4" />
+            <div className="pt-1 flex items-center gap-2 text-[#029FFC] font-medium">
+              <Mail className="w-4 h-4 text-[#029FFC]" />
               <a href="mailto:support@databounty.sampidia.com" className="hover:underline">
                 support@databounty.sampidia.com
               </a>
@@ -30,28 +34,28 @@ export default function Footer() {
           {/* Col 2: Fee Structure */}
           <div>
             <h4 className="text-sm font-semibold text-white mb-3 flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-[#029FFC]" />
               Transparent Fee Tiers
             </h4>
-            <ul className="space-y-2 text-gray-400">
-              <li className="flex justify-between border-b border-gray-800/60 pb-1">
+            <ul className="space-y-2 text-slate-300">
+              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
                 <span>Creator Task (₦100–₦9.9k):</span>
-                <strong className="text-emerald-300">₦50 Fee</strong>
+                <strong className="text-[#029FFC]">₦50 Fee</strong>
               </li>
-              <li className="flex justify-between border-b border-gray-800/60 pb-1">
+              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
                 <span>Creator Task (₦10k–₦49.9k):</span>
-                <strong className="text-emerald-300">₦100 Fee</strong>
+                <strong className="text-[#029FFC]">₦100 Fee</strong>
               </li>
-              <li className="flex justify-between border-b border-gray-800/60 pb-1">
+              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
                 <span>Creator Task (₦50k+):</span>
-                <strong className="text-emerald-300">₦500 Fee</strong>
+                <strong className="text-[#029FFC]">₦500 Fee</strong>
               </li>
-              <li className="flex justify-between border-b border-gray-800/60 pb-1">
-                <span>Tester Cashout (₦100–₦9.9k):</span>
+              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
+                <span>Tester Cashout (&lt;₦10k):</span>
                 <strong className="text-amber-300">₦50 Fee</strong>
               </li>
-              <li className="flex justify-between border-b border-gray-800/60 pb-1">
-                <span>Tester Cashout (₦10k+):</span>
+              <li className="flex justify-between border-b border-[#025BE5]/20 pb-1">
+                <span>Tester Cashout (&ge;₦10k):</span>
                 <strong className="text-amber-300">₦100 Fee</strong>
               </li>
             </ul>
@@ -62,22 +66,22 @@ export default function Footer() {
             <h4 className="text-sm font-semibold text-white mb-3">Quick Navigation</h4>
             <ul className="space-y-2">
               <li>
-                <Link href="/tasks" className="hover:text-emerald-400 transition-colors">
+                <Link href="/tasks" className="hover:text-[#029FFC] transition-colors">
                   Browse Available Bounties
                 </Link>
               </li>
               <li>
-                <Link href="/creator" className="hover:text-emerald-400 transition-colors">
+                <Link href="/creator" className="hover:text-[#029FFC] transition-colors">
                   Creator Campaign Dashboard
                 </Link>
               </li>
               <li>
-                <Link href="/profile" className="hover:text-emerald-400 transition-colors">
+                <Link href="/profile" className="hover:text-[#029FFC] transition-colors">
                   Profile & Bank Account Setup
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="hover:text-emerald-400 transition-colors text-purple-400">
+                <Link href="/admin" className="hover:text-[#029FFC] transition-colors text-[#029FFC]">
                   Admin Platform Revenue Suite
                 </Link>
               </li>
@@ -87,26 +91,26 @@ export default function Footer() {
           {/* Col 4: Verification Guarantee */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
-              <HeartHandshake className="w-4 h-4 text-emerald-400" />
+              <HeartHandshake className="w-4 h-4 text-[#029FFC]" />
               Automated Payout Engine
             </h4>
-            <p className="text-gray-400 leading-relaxed">
+            <p className="text-slate-300 leading-relaxed">
               Google Forms with Option 1 Google Sheet Webhook trigger instant automated wallet payouts as soon as form responses are recorded.
             </p>
-            <div className="p-3 bg-gray-900 border border-gray-800 rounded-lg text-gray-300 flex items-center justify-between">
+            <div className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-slate-300 flex items-center justify-between">
               <span>Minimum Payout Threshold:</span>
-              <span className="font-bold text-emerald-400 text-sm">₦100 Naira</span>
+              <span className="font-bold text-[#029FFC] text-sm">₦100 Naira</span>
             </div>
           </div>
 
         </div>
 
-        <div className="border-t border-gray-800/80 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-gray-500 text-[11px]">
+        <div className="border-t border-[#025BE5]/20 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-slate-400 text-[11px]">
           <p>© {new Date().getFullYear()} DataBounty Nigeria. All rights reserved.</p>
           <div className="flex gap-4 mt-2 sm:mt-0">
             <span>Built for Nigerian Creators & Testers</span>
             <span>•</span>
-            <a href="mailto:support@databounty.sampidia.com" className="hover:text-emerald-400">
+            <a href="mailto:support@databounty.sampidia.com" className="hover:text-[#029FFC]">
               Need Help? Contact Support
             </a>
           </div>

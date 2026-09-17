@@ -229,6 +229,12 @@ fun MainAppScreen() {
                         withdrawals = withdrawals.map { w ->
                             if (w.id == id) w.copy(status = newStatus) else w
                         }
+                    },
+                    onBatchStatusChanged = { ids, newStatus ->
+                        val idSet = ids.toSet()
+                        withdrawals = withdrawals.map { w ->
+                            if (idSet.contains(w.id)) w.copy(status = newStatus) else w
+                        }
                     }
                 )
             }

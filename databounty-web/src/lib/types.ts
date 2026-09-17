@@ -90,6 +90,8 @@ export interface WithdrawalRequest {
   fee: number;
   netAmount: number;
   bankName: string;
+  bankCode?: string;
+  bankTag?: string;
   accountNumber: string;
   accountName: string;
   status: WithdrawalStatus;

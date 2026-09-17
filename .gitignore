@@ -1,7 +1,7 @@
 # Large binary files & reference dumps
 *.apk
 uTest_V3.1.9.apk
-info
+info.txt
 Utest Andriod/
 
 # Environment variables & secret files
@@ -11,6 +11,11 @@ Utest Andriod/
 .env.test.local
 .env.production.local
 *.env
+env
+Bank_list_1789603203817.csv
+ngn_amount_disburse_sample.csv
+env.txt
+
 
 # Dependencies & Build artifacts (Web)
 node_modules/
@@ -26,6 +31,8 @@ databounty-android/app/build/
 databounty-android/.idea/
 databounty-android/*.iml
 databounty-android/local.properties
+google-services.json
+databounty-android/app/google-services.json
 
 # System & IDE files
 .DS_Store

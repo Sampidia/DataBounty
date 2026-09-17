@@ -1,12 +1,11 @@
 package com.databounty.app.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.databounty.app.model.BankInfo
+import com.databounty.app.model.DEFAULT_BANK
+import com.databounty.app.model.POPULAR_BANKS
 import com.databounty.app.model.UserProfile
 import com.databounty.app.model.WithdrawalRequest
 import com.databounty.app.model.calculateWithdrawalFee
@@ -34,7 +36,7 @@ fun WalletScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Tester Wallet & Payouts",
+                        text = "Tester Wallet & Cashout",
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = Color.White
@@ -64,7 +66,7 @@ fun WalletScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Available Balance",
+                        text = "Available Balance (NGN 🇳🇬)",
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -81,7 +83,7 @@ fun WalletScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Min Threshold: ₦100", fontSize = 11.sp, color = Color.LightGray)
-                        Text("Paystack NUBAN Verified", fontSize = 11.sp, color = TealAccent)
+                        Text("Default Bank: OPay", fontSize = 11.sp, color = TealAccent)
                     }
 
                     Button(
@@ -90,7 +92,7 @@ fun WalletScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
                     ) {
                         Text(
-                            text = "Cash Out to Bank (Min ₦100)",
+                            text = "Cash Out to Bank (Default: OPay)",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )
@@ -115,7 +117,7 @@ fun WalletScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "• Cashout ₦100 – ₦9,999: ₦50 Withdrawal Fee\n• Cashout ₦10,000+: ₦100 Withdrawal Fee",
+                        text = "• Cashout ₦100 – ₦9,999: ₦50 Fee Tier\n• Cashout ₦10,000+: ₦100 Fee Tier",
                         fontSize = 11.sp,
                         color = Color.LightGray
                     )
@@ -127,7 +129,7 @@ fun WalletScreen(
             WithdrawalDialog(
                 user = user,
                 onDismiss = { showWithdrawDialog = false },
-                onConfirm = { amount ->
+                onConfirm = { amount, bank ->
                     val fee = calculateWithdrawalFee(amount)
                     val newWd = WithdrawalRequest(
                         id = "wd_${System.currentTimeMillis()}",
@@ -136,7 +138,9 @@ fun WalletScreen(
                         amount = amount,
                         fee = fee,
                         netAmount = amount - fee,
-                        bankName = user.bankName,
+                        bankName = bank.name,
+                        bankCode = bank.code,
+                        bankTag = bank.tag,
                         accountNumber = user.accountNumber,
                         accountName = user.accountName,
                         requestedAt = "Just now"
@@ -153,34 +157,155 @@ fun WalletScreen(
 fun WithdrawalDialog(
     user: UserProfile,
     onDismiss: () -> Unit,
-    onConfirm: (Int) -> Unit
+    onConfirm: (Int, BankInfo) -> Unit
 ) {
     var amountText by remember { mutableStateOf("2000") }
+    var selectedBank by remember { mutableStateOf(DEFAULT_BANK) }
+    var bankSearchText by remember { mutableStateOf("") }
+    var accountNumber by remember { mutableStateOf(user.accountNumber) }
+    var accountName by remember { mutableStateOf(user.accountName) }
+    var isVerified by remember { mutableStateOf(true) }
+    var isInvalidDetails by remember { mutableStateOf(false) }
+    var isBankListExpanded by remember { mutableStateOf(false) }
+
     val amount = amountText.toIntOrNull() ?: 0
     val fee = calculateWithdrawalFee(amount)
     val netAmount = (amount - fee).coerceAtLeast(0)
+
+    val filteredBanks = POPULAR_BANKS.filter {
+        it.name.contains(bankSearchText, ignoreCase = true) ||
+        it.code.contains(bankSearchText, ignoreCase = true) ||
+        it.tag.contains(bankSearchText, ignoreCase = true)
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF111827),
         title = {
-            Text("Request Bank Cashout", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+            Text("Naira Bank Cashout (Default: OPay)", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                
+                // Amount Field
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it },
-                    label = { Text("Withdrawal Amount (₦)") },
+                    label = { Text("Cashout Amount (₦ NGN)", color = Color.Gray) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
+                // Searchable Bank Dropdown Selector
+                Text("Select Bank (Searchable)", fontSize = 11.sp, color = Color.LightGray)
+                Surface(
+                    color = Color(0xFF1F2937),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().clickable { isBankListExpanded = !isBankListExpanded }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("${selectedBank.name} (${selectedBank.code})", color = EmeraldPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text(if (isBankListExpanded) "▲" else "▼", color = Color.Gray, fontSize = 10.sp)
+                    }
+                }
+
+                if (isBankListExpanded) {
+                    OutlinedTextField(
+                        value = bankSearchText,
+                        onValueChange = { bankSearchText = it },
+                        placeholder = { Text("Filter banks...", fontSize = 11.sp) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Surface(
+                        color = Color(0xFF0B0F17),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().height(140.dp)
+                    ) {
+                        LazyColumn(modifier = Modifier.padding(6.dp)) {
+                            items(filteredBanks) { bank ->
+                                Text(
+                                    text = "${bank.name} (${bank.code})",
+                                    color = if (selectedBank.code == bank.code) EmeraldPrimary else Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (selectedBank.code == bank.code) FontWeight.Bold else FontWeight.Normal,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedBank = bank
+                                            isBankListExpanded = false
+                                            isVerified = false
+                                            isInvalidDetails = false
+                                        }
+                                        .padding(vertical = 6.dp, horizontal = 8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Account Number & Verify Button Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = accountNumber,
+                        onValueChange = {
+                            accountNumber = it
+                            isVerified = false
+                            isInvalidDetails = false
+                        },
+                        label = { Text("NUBAN Account (10 digits)", fontSize = 11.sp) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true
+                    )
+
+                    Button(
+                        onClick = {
+                            if (accountNumber.length == 10 && accountNumber != "0000000000") {
+                                isVerified = true
+                                isInvalidDetails = false
+                                accountName = user.name.uppercase()
+                            } else {
+                                isVerified = false
+                                isInvalidDetails = true
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF025BE5))
+                    ) {
+                        Text("Verify", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                // Light Red Box for Invalid Withdrawal Details
+                if (isInvalidDetails) {
+                    Surface(
+                        color = Color(0x33EF4444),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "invalid withdrawal details",
+                            color = Color(0xFFFCA5A5),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(10.dp)
+                        )
+                    }
+                }
+
+                // Breakdown Surface
                 Surface(
                     color = Color(0xFF0B0F17),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Gross Cashout: ₦$amount", fontSize = 11.sp, color = Color.White)
                         Text("Withdrawal Fee: -₦$fee", fontSize = 11.sp, color = Color(0xFFF59E0B))
                         Text("Net Bank Transfer: ₦$netAmount", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
@@ -190,8 +315,8 @@ fun WithdrawalDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (amount >= 100 && amount <= user.walletBalance) onConfirm(amount) },
-                enabled = amount >= 100 && amount <= user.walletBalance,
+                onClick = { if (amount >= 100 && !isInvalidDetails) onConfirm(amount, selectedBank) },
+                enabled = amount >= 100 && !isInvalidDetails,
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
             ) {
                 Text("Confirm Payout", color = Color.Black, fontWeight = FontWeight.Bold)

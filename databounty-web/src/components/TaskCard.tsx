@@ -19,61 +19,61 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
   const isEligible = isStateEligible && isGenderEligible;
 
   return (
-    <div className={`glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden ${
-      !isEligible ? 'opacity-60 border-gray-800' : ''
+    <div className={`glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bg-[#031F51] border border-[#025BE5]/30 ${
+      !isEligible ? 'opacity-60' : ''
     }`}>
       
       {/* Category & Status Banner */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-gray-900 border border-gray-800 text-gray-300">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#011438] border border-[#025BE5]/30 text-slate-300">
             {task.category === 'google_form' && (
               <>
-                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+                <FileSpreadsheet className="w-3.5 h-3.5 text-[#029FFC]" />
                 <span>Google Form</span>
               </>
             )}
             {task.category === 'app_test' && (
               <>
-                <Smartphone className="w-3.5 h-3.5 text-teal-400" />
+                <Smartphone className="w-3.5 h-3.5 text-[#029FFC]" />
                 <span>App Testing</span>
               </>
             )}
             {task.category === 'web_bug' && (
               <>
-                <Globe className="w-3.5 h-3.5 text-purple-400" />
+                <Globe className="w-3.5 h-3.5 text-[#029FFC]" />
                 <span>Web Bug Test</span>
               </>
             )}
           </div>
 
           <div className="text-right">
-            <span className="text-xs text-gray-400 block font-medium">Bounty Reward</span>
-            <span className="text-lg font-black text-emerald-400">₦{task.rewardPerUser.toLocaleString()}</span>
+            <span className="text-xs text-slate-400 block font-medium">Bounty Reward</span>
+            <span className="text-lg font-black text-[#029FFC]">₦{task.rewardPerUser.toLocaleString()}</span>
           </div>
         </div>
 
         {/* Title */}
-        <h3 className="text-base font-bold text-white mb-1 line-clamp-1 group-hover:text-emerald-400 transition-colors">
+        <h3 className="text-base font-bold text-white mb-1 line-clamp-1 group-hover:text-[#029FFC] transition-colors">
           {task.title}
         </h3>
-        <p className="text-xs text-gray-400 line-clamp-2 mb-4 leading-relaxed">
+        <p className="text-xs text-slate-300 line-clamp-2 mb-4 leading-relaxed">
           {task.description}
         </p>
 
         {/* Target Demographic Pills */}
         <div className="flex flex-wrap gap-1.5 mb-4">
-          <span className="px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-[10px] text-gray-300 flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-emerald-400" />
+          <span className="px-2 py-0.5 rounded bg-[#011438] border border-[#025BE5]/30 text-[10px] text-slate-300 flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-[#029FFC]" />
             {task.targetState === 'All' ? 'All 36 States + FCT' : task.targetState}
           </span>
-          <span className="px-2 py-0.5 rounded bg-gray-900 border border-gray-800 text-[10px] text-gray-300 flex items-center gap-1">
-            <Users className="w-3 h-3 text-teal-400" />
+          <span className="px-2 py-0.5 rounded bg-[#011438] border border-[#025BE5]/30 text-[10px] text-slate-300 flex items-center gap-1">
+            <Users className="w-3 h-3 text-[#029FFC]" />
             {task.targetGender === 'All' ? 'All Genders' : `${task.targetGender} Only`}
           </span>
           {task.googleFormVerificationType === 'option1_webhook' && (
-            <span className="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] text-emerald-300 flex items-center gap-1 font-semibold">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+            <span className="px-2 py-0.5 rounded bg-[#025BE5]/20 border border-[#025BE5]/40 text-[10px] text-[#029FFC] flex items-center gap-1 font-semibold">
+              <CheckCircle2 className="w-3 h-3 text-[#029FFC]" />
               Auto Payout
             </span>
           )}
@@ -81,16 +81,16 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
       </div>
 
       {/* Spots Progress & Action Button */}
-      <div className="space-y-3 pt-2 border-t border-gray-800/80">
+      <div className="space-y-3 pt-2 border-t border-[#025BE5]/20">
         <div className="space-y-1">
-          <div className="flex justify-between text-[11px] text-gray-400 font-medium">
+          <div className="flex justify-between text-[11px] text-slate-400 font-medium">
             <span>Spots Taken: {task.completedSpots} / {task.totalSpots}</span>
-            <span className="text-emerald-400 font-bold">{percentage}%</span>
+            <span className="text-[#029FFC] font-bold">{percentage}%</span>
           </div>
-          <div className="w-full bg-gray-900 h-2 rounded-full overflow-hidden border border-gray-800">
+          <div className="w-full bg-[#011438] h-2 rounded-full overflow-hidden border border-[#025BE5]/20">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
-                isFull ? 'bg-gray-600' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                isFull ? 'bg-slate-600' : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC]'
               }`}
               style={{ width: `${percentage}%` }}
             />
@@ -102,10 +102,10 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
           onClick={() => onSelectTask(task)}
           className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
             isFull
-              ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
               : !isEligible
-              ? 'bg-gray-800/60 text-gray-500 cursor-not-allowed'
-              : 'bg-emerald-500 hover:bg-emerald-400 text-gray-950 shadow-md hover:scale-[1.01]'
+              ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white shadow-md hover:scale-[1.01]'
           }`}
         >
           {isFull ? (

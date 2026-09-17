@@ -1,0 +1,135 @@
+implementation plan:  /home/afigo/.gemini/antigravity-ide/brain/f0e2b368-40db-47bb-a5ef-6490aa99f1e4/implementation_plan.md
+
+Github: https://github.com/Sampidia/DataBounty.git
+
+step 1: git init
+step 2: git add .
+step 3: git commit -am  "Initial Version 0.0.01"
+step 4: git remote add origin https://github.com/Sampidia/DataBounty.git
+step 5: git push origin master
+
+
+Import into Vercel:
+Go to vercel.com/new.
+Select your DataBounty repository.
+Set Root Directory to databounty-web.
+Under Environment Variables, add:
+ADMIN_EMAIL: support@databounty.sampidia.com
+NEXT_PUBLIC_FIREBASE_API_KEY: (From Firebase Console)
+NEXT_PUBLIC_FIREBASE_PROJECT_ID: (From Firebase Console)
+Click Deploy.
+
+
+Part 2: Complete Firebase Setup Steps
+Step 1: Create Firebase Project
+Go to the Firebase Console.
+Click Add Project $\rightarrow$ Name it databounty-app.
+Enable Google Analytics (optional) and click Create Project.
+Step 2: Register Web & Android Apps
+Web App:
+Click the Web (</>) icon in Firebase Console.
+Register app DataBounty Web.
+Copy the firebaseConfig object and add to databounty-web/.env.local:
+env
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSy...
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=databounty-app.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=databounty-app
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=databounty-app.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
+NEXT_PUBLIC_FIREBASE_APP_ID=1:...
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=
+ADMIN_EMAIL=support@databounty.sampidia.com
+
+
+
+Native Android App:
+Click Add App $\rightarrow$ Select Android.
+Package name: com.databounty.app (matches 
+
+AndroidManifest.xml
+).
+Download google-services.json and place it in databounty-android/app/google-services.json.
+Step 3: Enable Firebase Services
+Firebase Authentication:
+
+Go to Build $\rightarrow$ Authentication $\rightarrow$ Get Started.
+Enable Email/Password and Google sign-in providers.
+Cloud Firestore Database:
+
+Go to Build $\rightarrow$ Firestore Database $\rightarrow$ Create Database.
+Select production mode and choose your server location (e.g. europe-west3 or us-central).
+Firebase Storage:
+
+Go to Build $\rightarrow$ Storage $\rightarrow$ Get Started.
+Used for storing tester screenshot proofs and mobile app APKs.
+Step 4: Secure Admin Email Protection (Secret Manager)
+To safeguard support@databounty.sampidia.com from being exposed in public client bundles or hardcoded in repositories:
+
+Store ADMIN_EMAIL in Google Cloud Secret Manager or Vercel Environment Variables:
+bash
+# In Google Cloud CLI (Optional for Firebase Functions)
+gcloud secrets create ADMIN_EMAIL --replication-policy="automatic"
+echo -n "support@databounty.sampidia.com" | gcloud secrets versions add ADMIN_EMAIL --data-file=-
+In Next.js API Routes (like 
+
+route.ts
+), read process.env.ADMIN_EMAIL server-side only.
+Step 5: Firestore Security Rules Setup
+Go to Firestore $\rightarrow$ Rules tab and deploy the following security policy:
+
+javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // User Profile Rules
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Bounty Tasks Rules
+    match /bounties/{taskId} {
+      allow read: if true; // Public feed matching
+      allow create: if request.auth != null && request.resource.data.creatorFeePaid > 0;
+      allow update, delete: if request.auth != null && resource.data.creatorId == request.auth.uid;
+    }
+    
+    // Submissions Rules
+    match /submissions/{subId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && (resource.data.userId == request.auth.uid || resource.data.creatorId == request.auth.uid);
+    }
+    
+    // Withdrawal Requests (Admin restricted)
+    match /withdrawals/{wdId} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || request.auth.token.admin == true);
+      allow create: if request.auth != null && request.resource.data.amount >= 100;
+      allow update: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}
+Step 6: Option 1 Google Form Apps Script Webhook Setup Guide
+Provide this lightweight script snippet to Creators when they choose Option 1 (Automated Payout) for Google Forms:
+
+In Google Sheets (linked to Google Form), click Extensions $\rightarrow$ Apps Script.
+Replace code with:
+javascript
+function onFormSubmit(e) {
+  var responses = e.values;
+  var userEmail = responses[1]; // Adjust index for email field
+  
+  var payload = {
+    "userEmail": userEmail,
+    "formId": "YOUR_FORM_ID",
+    "secret": "WEBHOOK_SECRET"
+  };
+  
+  UrlFetchApp.fetch("https://databounty.vercel.app/api/webhooks/google-form", {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload)
+  });
+}
+Set trigger: Triggers $\rightarrow$ Add Trigger $\rightarrow$ Event Source: From Spreadsheet $\rightarrow$ Event Type: On form submit.
