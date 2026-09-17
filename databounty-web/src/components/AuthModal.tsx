@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { UserRole } from '@/lib/types';
 import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle } from 'lucide-react';
 
 export function AuthModal() {
+  const router = useRouter();
   const { isAuthModalOpen, closeAuthModal, authModalRole, login, signup, user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<UserRole>(authModalRole === 'admin' ? 'tester' : (authModalRole || 'tester'));
   const [email, setEmail] = useState('');
@@ -34,6 +36,9 @@ export function AuthModal() {
         await signup(email, password, activeTab, name);
       } else {
         await login(email, password, activeTab);
+      }
+      if (activeTab === 'creator') {
+        router.push('/creator');
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Authentication failed. Please check your details.');
@@ -115,6 +120,9 @@ export function AuthModal() {
                   onClick={async () => {
                     await updateUser({ role: activeTab });
                     closeAuthModal();
+                    if (activeTab === 'creator') {
+                      router.push('/creator');
+                    }
                   }}
                   className="px-4 py-2 bg-gradient-to-r from-[#025BE5] to-[#029FFC] text-white font-bold rounded-lg text-xs shadow-md"
                 >

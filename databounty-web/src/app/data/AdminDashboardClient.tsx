@@ -12,6 +12,9 @@ import {
 } from 'recharts';
 import { Shield, Lock, Download, CheckCircle2, FileSpreadsheet, Mail, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
 
+import { db } from '@/lib/firebase';
+import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+
 export default function AdminDashboardClient() {
   const { isAdminAuthenticated, setAdminAuthenticated } = useAuth();
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(INITIAL_WITHDRAWALS);
@@ -26,6 +29,28 @@ export default function AdminDashboardClient() {
   const [infoMsg, setInfoMsg] = useState('');
   const [isExporting, setIsExporting] = useState(false);
 
+  // Real-time listener for withdrawal requests from Firestore
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      const q = query(collection(db, 'withdrawals'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snap) => {
+          if (!snap.empty) {
+            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WithdrawalRequest));
+            // Sort by requestedAt descending
+            loaded.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+            setWithdrawals(loaded);
+          }
+        },
+        (err) => {
+          console.warn('[AdminDashboard] Firestore withdrawals snapshot error:', err);
+        }
+      );
+      return () => unsubscribe();
+    }
+  }, [isAdminAuthenticated]);
+
   // Compute platform fee earnings
   const creatorFeesTotal = transactions
     .filter((t) => t.type === 'creator_fee')
@@ -38,11 +63,18 @@ export default function AdminDashboardClient() {
   const totalPlatformEarnings = creatorFeesTotal + withdrawalFeesTotal;
 
   // Single item status switcher
-  const handleUpdateStatus = (id: string, newStatus: WithdrawalStatus) => {
+  const handleUpdateStatus = async (id: string, newStatus: WithdrawalStatus) => {
     const updated = withdrawals.map((w) =>
       w.id === id ? { ...w, status: newStatus, updatedAt: new Date().toISOString() } : w
     );
     setWithdrawals(updated);
+
+    try {
+      const wdRef = doc(db, 'withdrawals', id);
+      await updateDoc(wdRef, { status: newStatus, updatedAt: new Date().toISOString() });
+    } catch (err) {
+      console.warn('[AdminDashboard] Firestore status update error:', err);
+    }
   };
 
   // Request OTP Email Dispatch

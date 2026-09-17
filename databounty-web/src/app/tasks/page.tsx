@@ -10,6 +10,9 @@ import { INITIAL_TASKS, fetchTasksFromFirestore, submitTaskProofToFirestore } fr
 import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
 import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle } from 'lucide-react';
 
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 export default function TasksPage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [tasks, setTasks] = useState<BountyTask[]>([]);
@@ -32,13 +35,35 @@ export default function TasksPage() {
 
   useEffect(() => {
     setIsLoading(true);
-    fetchTasksFromFirestore()
-      .then((loadedTasks) => {
-        setTasks(loadedTasks || []);
-      })
-      .finally(() => {
+    const tasksRef = collection(db, 'tasks');
+    const q = query(tasksRef, where('status', '==', 'active'));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
+          // Sort newest first
+          loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setTasks(loaded);
+        } else {
+          setTasks([]);
+        }
         setIsLoading(false);
-      });
+      },
+      (err) => {
+        console.warn('[TasksPage] Real-time tasks snapshot error:', err);
+        fetchTasksFromFirestore()
+          .then((loadedTasks) => {
+            setTasks(loadedTasks || []);
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -63,8 +88,21 @@ export default function TasksPage() {
       if (!matchTitle && !matchDesc) return false;
     }
     if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
-    if (stateFilter !== 'all' && task.targetState !== 'all' && task.targetState !== stateFilter) return false;
-    if (genderFilter !== 'all' && task.targetGender !== 'All' && task.targetGender !== genderFilter) return false;
+
+    const isStateMatch =
+      stateFilter === 'all' ||
+      !task.targetState ||
+      task.targetState.toLowerCase() === 'all' ||
+      task.targetState.toLowerCase() === stateFilter.toLowerCase();
+    if (!isStateMatch) return false;
+
+    const isGenderMatch =
+      genderFilter === 'all' ||
+      !task.targetGender ||
+      task.targetGender.toLowerCase() === 'all' ||
+      task.targetGender.toLowerCase() === genderFilter.toLowerCase();
+    if (!isGenderMatch) return false;
+
     return true;
   });
 

@@ -55,9 +55,9 @@ fun MainAppScreen() {
                 deviceBrand = "Samsung",
                 deviceModel = "Galaxy A54 5G",
                 osVersion = "Android 14 (API 34)",
-                bankName = "GTBank",
-                accountNumber = "0123456789",
-                accountName = "AMINA BELLO",
+                bankName = "",
+                accountNumber = "",
+                accountName = "",
                 walletBalance = 0.0
             )
         )

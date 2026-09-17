@@ -38,6 +38,31 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   const [paymentOption, setPaymentOption] = useState<'wallet' | 'flutterwave' | 'split'>('flutterwave');
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
+  const [formLinkError, setFormLinkError] = useState('');
+  const [guideModal, setGuideModal] = useState<'option1' | 'option2' | null>(null);
+
+  // Reset form fields on open to ensure a fresh form every time
+  React.useEffect(() => {
+    if (isOpen) {
+      setTitle('');
+      setDescription('');
+      setCategory('google_form');
+      setRewardPerUser(200);
+      setTotalSpots(20);
+      setGoogleFormVerificationType('option1_webhook');
+      setFormLink('');
+      setAppDownloadUrl('');
+      setWebsiteUrl('');
+      setTestInstructions('');
+      setTargetState('All');
+      setTargetGender('All');
+      setPaymentOption('flutterwave');
+      setIsProcessing(false);
+      setActiveStep(1);
+      setFormLinkError('');
+      setGuideModal(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -49,6 +74,12 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   // Split payment amounts
   const walletDebitAmount = Math.min(userWalletBalance, totalDepositRequired);
   const remainingFlutterwaveAmount = Math.max(0, totalDepositRequired - walletDebitAmount);
+
+  const isGoogleFormUrlValid = (url: string) => {
+    if (!url) return false;
+    const cleanUrl = url.trim().toLowerCase();
+    return cleanUrl.startsWith('https://docs.google.com/forms/') || cleanUrl.startsWith('https://forms.gle/');
+  };
 
   const saveAndPublishTask = async (newTask: BountyTask) => {
     try {
@@ -64,10 +95,20 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormLinkError('');
+
     if (!title || !description) return;
     if (rewardPerUser < 150) {
       alert('Minimum reward per tester is ₦150');
       return;
+    }
+
+    if (category === 'google_form') {
+      if (!isGoogleFormUrlValid(formLink)) {
+        setFormLinkError('Google Form URL Link * must be a valid Google Form link (e.g., https://docs.google.com/forms/d/e/... or https://forms.gle/...)');
+        setActiveStep(1);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -126,7 +167,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
           customizations: {
             title: 'DataBounty Campaign Escrow',
             description: `Escrow for ${title}`,
-            logo: '/Databounty_logo.webp',
+            logo: 'https://databounty.sampidia.com/flutterwave_icon.png',
           },
           callback: async (data: any) => {
             try {
@@ -294,10 +335,9 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
+                    <div
                       onClick={() => setGoogleFormVerificationType('option1_webhook')}
-                      className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                      className={`p-3 rounded-lg border text-left text-xs transition-all cursor-pointer ${
                         googleFormVerificationType === 'option1_webhook'
                           ? 'bg-[#025BE5]/20 border-[#029FFC] text-white ring-1 ring-[#029FFC]'
                           : 'bg-[#031F51] border-[#025BE5]/20 text-slate-400'
@@ -310,12 +350,21 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                       <p className="text-[11px] text-slate-300">
                         Automated verification via Google Sheets Webhook script on submission.
                       </p>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGuideModal('option1');
+                        }}
+                        className="text-red-400 hover:text-red-300 text-[11px] font-bold underline mt-2 text-left block"
+                      >
+                        How to setup Option 1 Google Form Auto-Payout Webhook
+                      </button>
+                    </div>
 
-                    <button
-                      type="button"
+                    <div
                       onClick={() => setGoogleFormVerificationType('option2_manual')}
-                      className={`p-3 rounded-lg border text-left text-xs transition-all ${
+                      className={`p-3 rounded-lg border text-left text-xs transition-all cursor-pointer ${
                         googleFormVerificationType === 'option2_manual'
                           ? 'bg-[#025BE5]/20 border-[#029FFC] text-white ring-1 ring-[#029FFC]'
                           : 'bg-[#031F51] border-[#025BE5]/20 text-slate-400'
@@ -326,23 +375,41 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                         <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">Manual Review</span>
                       </div>
                       <p className="text-[11px] text-slate-300">
-                        Tester submits screenshot proof. Creator manually approves each submission.
+                        Testers submit verification code and screenshot. Creator manually approves each submission.
                       </p>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setGuideModal('option2');
+                        }}
+                        className="text-red-400 hover:text-red-300 text-[11px] font-bold underline mt-2 text-left block"
+                      >
+                        How to setup Option 2 Google Form Verification Code &amp; Screenshot
+                      </button>
+                    </div>
                   </div>
 
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1">
-                      Google Form URL Link *
+                      Google Form URL Link * <span className="text-[10px] text-slate-400">(Must start with https://docs.google.com/forms/ or https://forms.gle/)</span>
                     </label>
                     <input
                       type="url"
                       required
                       value={formLink}
-                      onChange={(e) => setFormLink(e.target.value)}
-                      placeholder="https://docs.google.com/forms/d/e/.../viewform"
-                      className="w-full bg-[#031F51] border border-[#025BE5]/30 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC]"
+                      onChange={(e) => {
+                        setFormLink(e.target.value);
+                        if (formLinkError) setFormLinkError('');
+                      }}
+                      placeholder="https://docs.google.com/forms/d/e/.../viewform or https://forms.gle/..."
+                      className={`w-full bg-[#031F51] border rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none ${
+                        formLinkError ? 'border-red-500 focus:border-red-400' : 'border-[#025BE5]/30 focus:border-[#029FFC]'
+                      }`}
                     />
+                    {formLinkError && (
+                      <p className="text-xs text-red-400 font-bold mt-1.5">{formLinkError}</p>
+                    )}
                   </div>
                 </div>
               )}
@@ -638,6 +705,110 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
 
         </form>
       </div>
+
+      {/* Interactive Google Form Setup Guide Modals */}
+      {guideModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#031F51] border border-[#025BE5]/40 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl text-white p-6 space-y-4">
+            
+            <div className="flex items-center justify-between border-b border-[#025BE5]/20 pb-3">
+              <h3 className="text-base font-bold text-[#029FFC] flex items-center gap-2">
+                <Code className="w-5 h-5 text-[#029FFC]" />
+                {guideModal === 'option1'
+                  ? 'Option 1: Google Form Auto-Payout Webhook Setup Guide'
+                  : 'Option 2: Verification Code & Screenshot Setup Guide'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setGuideModal(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {guideModal === 'option1' ? (
+              <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p className="font-semibold text-white">
+                  Follow these step-by-step instructions to configure automatic instant payouts for your Google Form survey:
+                </p>
+                <ol className="list-decimal pl-4 space-y-2.5">
+                  <li>
+                    <strong>Open your Google Form</strong> in Google Drive.
+                  </li>
+                  <li>
+                    Click the <strong>Responses</strong> tab, then click the green <strong>Link to Sheets</strong> icon to create/open the response spreadsheet.
+                  </li>
+                  <li>
+                    In the connected Google Sheet, click <strong>Extensions</strong> &rarr; <strong>Apps Script</strong>.
+                  </li>
+                  <li>
+                    Clear any default code in the script editor and paste the following snippet:
+                    <pre className="mt-1.5 p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre">
+{`function onFormSubmit(e) {
+  var url = "https://databounty.sampidia.com/api/webhooks/google-form";
+  var payload = JSON.stringify({
+    formId: FormApp.getActiveForm() ? FormApp.getActiveForm().getId() : "form_auto",
+    responses: e.values || []
+  });
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": payload
+  };
+  UrlFetchApp.fetch(url, options);
+}`}
+                    </pre>
+                  </li>
+                  <li>
+                    Click <strong>Save</strong> (floppy disk icon), then select <strong>Triggers</strong> (the alarm clock icon on the left sidebar).
+                  </li>
+                  <li>
+                    Click <strong>+ Add Trigger</strong> (bottom right), select function: <code className="text-[#029FFC]">onFormSubmit</code>, Event source: <code className="text-[#029FFC]">From spreadsheet</code>, Event type: <code className="text-[#029FFC]">On form submit</code>.
+                  </li>
+                  <li>
+                    Click <strong>Save</strong> and authorize Google Apps Script permissions.
+                  </li>
+                </ol>
+                <div className="p-3 bg-[#025BE5]/10 border border-[#025BE5]/30 rounded-xl text-[11px] text-slate-300">
+                  ⚡ Once configured, every form response will automatically trigger instant wallet payout to verified testers!
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <p className="font-semibold text-white">
+                  Follow these steps to configure Option 2 Manual Review with verification code &amp; screenshot:
+                </p>
+                <ol className="list-decimal pl-4 space-y-2.5">
+                  <li>
+                    <strong>Open your Google Form</strong> in Google Drive.
+                  </li>
+                  <li>
+                    Click <strong>Settings</strong> &rarr; expand <strong>Presentation</strong>.
+                  </li>
+                  <li>
+                    Under <strong>Confirmation message</strong>, click <i>Edit</i> and enter a unique secret code for testers (e.g. <code className="text-[#029FFC] font-bold">DB-VERIFY-9982</code>).
+                  </li>
+                  <li>
+                    Instruct testers in your bounty description to copy this confirmation code and upload a screenshot of the form submission confirmation screen.
+                  </li>
+                  <li>
+                    Review uploaded proof in your Creator Dashboard and approve payouts manually.
+                  </li>
+                </ol>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setGuideModal(null)}
+              className="w-full py-2.5 bg-[#025BE5] hover:bg-[#0379FA] text-white font-bold rounded-xl text-xs transition-all mt-2"
+            >
+              Got it, Close Setup Instructions
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

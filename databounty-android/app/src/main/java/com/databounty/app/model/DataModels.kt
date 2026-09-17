@@ -15,8 +15,8 @@ enum class TaskCategory {
 }
 
 enum class VerificationType {
-    OPTION1_WEBHOOK,
-    OPTION2_MANUAL
+    OPTION1_WEBHOOK, // Auto-verified via Apps Script Webhook
+    OPTION2_MANUAL    // Testers submit verification code and screenshot. Creator manually approves each submission.
 }
 
 data class BankInfo(

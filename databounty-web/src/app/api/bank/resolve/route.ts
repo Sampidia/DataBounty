@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { findBankByTag } from '@/lib/banks';
 
 export async function POST(request: Request) {
   try {
-    const { accountNumber, bankCode } = await request.json();
+    const { accountNumber, bankCode, bankName } = await request.json();
 
     if (!accountNumber || accountNumber.trim().length !== 10 || !/^\d{10}$/.test(accountNumber)) {
       return NextResponse.json(
@@ -11,6 +12,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const codeToUse = bankCode || (bankName ? findBankByTag(bankName).code : '100004');
     const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
 
     if (secretKey) {
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           account_number: accountNumber,
-          account_bank: bankCode || '100004',
+          account_bank: codeToUse,
         }),
       });
 

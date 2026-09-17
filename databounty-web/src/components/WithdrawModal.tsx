@@ -9,6 +9,8 @@ import {
   TrendingUp, AlertTriangle,
 } from 'lucide-react';
 
+import { requestWithdrawalInFirestore } from '@/lib/store';
+
 interface WithdrawModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -63,6 +65,7 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
         body: JSON.stringify({
           accountNumber,
           bankCode: selectedBank.code,
+          bankName: selectedBank.name,
         }),
       });
 
@@ -86,7 +89,7 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (amount < 100) {
       setErrorMsg('Minimum withdrawal threshold is ₦100 Naira.');
@@ -117,6 +120,12 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
       status: 'PENDING',
       requestedAt: new Date().toISOString(),
     };
+
+    try {
+      await requestWithdrawalInFirestore(newWd);
+    } catch (err) {
+      console.warn('[WithdrawModal] Error saving withdrawal to Firestore:', err);
+    }
 
     onWithdrawSubmitted(newWd);
     onClose();

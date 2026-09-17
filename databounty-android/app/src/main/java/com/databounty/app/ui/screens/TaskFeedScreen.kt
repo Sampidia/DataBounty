@@ -36,8 +36,8 @@ fun TaskFeedScreen(
 
     val filteredTasks = tasks.filter { task ->
         val categoryMatch = selectedCategoryFilter == null || task.category == selectedCategoryFilter
-        val stateMatch = task.targetState == "All" || task.targetState == user.state
-        val genderMatch = task.targetGender == "All" || task.targetGender == user.gender
+        val stateMatch = task.targetState.equals("All", ignoreCase = true) || task.targetState.equals(user.state, ignoreCase = true)
+        val genderMatch = task.targetGender.equals("All", ignoreCase = true) || task.targetGender.equals(user.gender, ignoreCase = true)
         categoryMatch && stateMatch && genderMatch
     }
 
@@ -139,8 +139,8 @@ fun TaskCardItem(
     onClick: () -> Unit
 ) {
     val progress = (task.completedSpots.toFloat() / task.totalSpots.toFloat()).coerceIn(0f, 1f)
-    val isEligible = (task.targetState == "All" || task.targetState == user.state) &&
-            (task.targetGender == "All" || task.targetGender == user.gender)
+    val isEligible = (task.targetState.equals("All", ignoreCase = true) || task.targetState.equals(user.state, ignoreCase = true)) &&
+            (task.targetGender.equals("All", ignoreCase = true) || task.targetGender.equals(user.gender, ignoreCase = true))
 
     Card(
         modifier = Modifier

@@ -46,14 +46,14 @@ export default function Navbar({
         
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative h-16 px-4 py-1 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
+          <div className="relative h-14 px-3.5 py-0.5 bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
             <Image 
               src="/Databounty_logo.webp" 
               alt="DataBounty Logo" 
-              width={240} 
-              height={72} 
+              width={260} 
+              height={80} 
               priority
-              className="object-contain h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
+              className="object-contain h-13 sm:h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
             />
           </div>
         </Link>

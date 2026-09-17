@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_SUBMISSIONS } from '@/lib/store';
 import { BountyTask } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
@@ -25,28 +25,32 @@ export default function CreatorDashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
 
-  // Fetch creator's tasks from Firestore
+  // Fetch creator's tasks from Firestore with real-time listener
   useEffect(() => {
     if (user?.id) {
       setIsLoadingTasks(true);
-      const fetchCreatorTasks = async () => {
-        try {
-          const tasksRef = collection(db, 'tasks');
-          const q = query(tasksRef, where('creatorId', '==', user.id));
-          const snap = await getDocs(q);
+      const tasksRef = collection(db, 'tasks');
+      const q = query(tasksRef, where('creatorId', '==', user.id));
+
+      const unsubscribe = onSnapshot(
+        q,
+        (snap) => {
           if (!snap.empty) {
             const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
+            loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             setTasks(loaded);
           } else {
             setTasks([]);
           }
-        } catch (err) {
+          setIsLoadingTasks(false);
+        },
+        (err) => {
           console.warn('[CreatorDashboard] Firestore fetch error:', err);
-        } finally {
           setIsLoadingTasks(false);
         }
-      };
-      fetchCreatorTasks();
+      );
+
+      return () => unsubscribe();
     }
   }, [user?.id]);
 

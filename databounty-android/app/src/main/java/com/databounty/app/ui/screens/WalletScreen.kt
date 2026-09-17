@@ -30,6 +30,8 @@ fun WalletScreen(
     onWithdrawRequested: (WithdrawalRequest) -> Unit
 ) {
     var showWithdrawDialog by remember { mutableStateOf(false) }
+    var showInsufficientBalanceDialog by remember { mutableStateOf(false) }
+    var attemptedAmount by remember { mutableStateOf(0) }
 
     Scaffold(
         topBar = {
@@ -66,7 +68,7 @@ fun WalletScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "Available Balance (NGN 🇳🇬)",
+                        text = "Available Wallet Balance",
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -83,16 +85,23 @@ fun WalletScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text("Min Threshold: ₦100", fontSize = 11.sp, color = Color.LightGray)
-                        Text("Default Bank: OPay", fontSize = 11.sp, color = TealAccent)
+                        Text("Instant Payout PENDING Queue", fontSize = 11.sp, color = TealAccent)
                     }
 
                     Button(
-                        onClick = { showWithdrawDialog = true },
+                        onClick = {
+                            if (user.walletBalance < 100) {
+                                attemptedAmount = 100
+                                showInsufficientBalanceDialog = true
+                            } else {
+                                showWithdrawDialog = true
+                            }
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
                     ) {
                         Text(
-                            text = "Cash Out to Bank (Default: OPay)",
+                            text = "Cash Out to Bank",
                             color = Color.Black,
                             fontWeight = FontWeight.Bold
                         )
@@ -130,23 +139,72 @@ fun WalletScreen(
                 user = user,
                 onDismiss = { showWithdrawDialog = false },
                 onConfirm = { amount, bank ->
-                    val fee = calculateWithdrawalFee(amount)
-                    val newWd = WithdrawalRequest(
-                        id = "wd_${System.currentTimeMillis()}",
-                        userId = user.id,
-                        userName = user.name,
-                        amount = amount,
-                        fee = fee,
-                        netAmount = amount - fee,
-                        bankName = bank.name,
-                        bankCode = bank.code,
-                        bankTag = bank.tag,
-                        accountNumber = user.accountNumber,
-                        accountName = user.accountName,
-                        requestedAt = "Just now"
+                    if (amount > user.walletBalance) {
+                        attemptedAmount = amount
+                        showWithdrawDialog = false
+                        showInsufficientBalanceDialog = true
+                    } else {
+                        val fee = calculateWithdrawalFee(amount)
+                        val newWd = WithdrawalRequest(
+                            id = "wd_${System.currentTimeMillis()}",
+                            userId = user.id,
+                            userName = user.name,
+                            amount = amount,
+                            fee = fee,
+                            netAmount = amount - fee,
+                            bankName = bank.name,
+                            bankCode = bank.code,
+                            bankTag = bank.tag,
+                            accountNumber = user.accountNumber,
+                            accountName = user.accountName,
+                            requestedAt = "Just now"
+                        )
+                        onWithdrawRequested(newWd)
+                        showWithdrawDialog = false
+                    }
+                }
+            )
+        }
+
+        if (showInsufficientBalanceDialog) {
+            AlertDialog(
+                onDismissRequest = { showInsufficientBalanceDialog = false },
+                containerColor = Color(0xFF111827),
+                title = {
+                    Text(
+                        text = "Insufficient Wallet Balance",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color(0xFFEF4444)
                     )
-                    onWithdrawRequested(newWd)
-                    showWithdrawDialog = false
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "You do not have enough in your balance to cash out ₦$attemptedAmount.",
+                            fontSize = 13.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Current Available Balance: ₦${user.walletBalance.toInt()}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldPrimary
+                        )
+                        Text(
+                            text = "Please reduce your withdrawal amount or complete more tasks to earn more money.",
+                            fontSize = 12.sp,
+                            color = Color.LightGray
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = { showInsufficientBalanceDialog = false },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                    ) {
+                        Text("Got it", color = Color.Black, fontWeight = FontWeight.Bold)
+                    }
                 }
             )
         }
@@ -164,7 +222,7 @@ fun WithdrawalDialog(
     var bankSearchText by remember { mutableStateOf("") }
     var accountNumber by remember { mutableStateOf(user.accountNumber) }
     var accountName by remember { mutableStateOf(user.accountName) }
-    var isVerified by remember { mutableStateOf(true) }
+    var isVerified by remember { mutableStateOf(user.accountNumber.length == 10) }
     var isInvalidDetails by remember { mutableStateOf(false) }
     var isBankListExpanded by remember { mutableStateOf(false) }
 
@@ -182,7 +240,7 @@ fun WithdrawalDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF111827),
         title = {
-            Text("Naira Bank Cashout (Default: OPay)", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
+            Text("Naira Bank Cashout", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {

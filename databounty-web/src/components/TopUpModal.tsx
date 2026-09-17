@@ -54,7 +54,7 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
         customizations: {
           title: 'DataBounty Escrow Top-Up',
           description: `Wallet Funding: ₦${amount.toLocaleString()}`,
-          logo: '/Databounty_logo.webp',
+          logo: 'https://databounty.sampidia.com/flutterwave_icon.png',
         },
         callback: async (data: any) => {
           try {
