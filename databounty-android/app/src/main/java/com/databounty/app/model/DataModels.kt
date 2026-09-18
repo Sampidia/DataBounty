@@ -139,3 +139,18 @@ fun calculateCreatorFee(totalBudget: Int): Int {
         else -> 500
     }
 }
+
+data class TaskSubmission(
+    val id: String,
+    val taskId: String,
+    val taskTitle: String,
+    val userId: String,
+    val userName: String,
+    val userState: String,
+    val userGender: String,
+    val rewardAmount: Int,
+    val status: String = "pending", // "pending", "approved", "rejected"
+    val secretCode: String? = null,
+    val proofUrl: String? = null,
+    val submittedAt: String = ""
+)

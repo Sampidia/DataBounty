@@ -26,6 +26,7 @@ export default function TasksPage() {
   const [stateFilter, setStateFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
   const [proofUrl, setProofUrl] = useState<string>('');
+  const [secretCode, setSecretCode] = useState<string>('');
   const [bugTitle, setBugTitle] = useState<string>('');
   const [bugDescription, setBugDescription] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -115,11 +116,15 @@ export default function TasksPage() {
     setSelectedTask(task);
     setTimerSeconds(900);
     setIsTimerRunning(true);
+    setSecretCode('');
+    setProofUrl('');
   };
 
   const handleCloseTaskModal = () => {
     setSelectedTask(null);
     setIsTimerRunning(false);
+    setSecretCode('');
+    setProofUrl('');
   };
 
   const handleSubmitProof = async (e: React.FormEvent) => {
@@ -129,6 +134,11 @@ export default function TasksPage() {
     if (!isAuthenticated || !user) {
       alert('Authentication required: Please sign in or register to submit task proofs.');
       openAuthModal('tester');
+      return;
+    }
+
+    if (selectedTask.category === 'google_form' && selectedTask.googleFormVerificationType === 'option2_manual' && !secretCode) {
+      alert('Please enter the verification Secret Code displayed on your Google Form confirmation screen.');
       return;
     }
 
@@ -144,7 +154,8 @@ export default function TasksPage() {
         userState: user.state,
         userGender: user.gender,
         rewardAmount: selectedTask.rewardPerUser,
-        status: selectedTask.category === 'google_form' ? 'pending_verification' : 'pending',
+        status: selectedTask.category === 'google_form' && selectedTask.googleFormVerificationType === 'option1_webhook' ? 'pending_verification' : 'pending',
+        secretCode: secretCode || undefined,
         proofUrl: proofUrl || 'Submitted proof link',
         bugTitle: bugTitle || undefined,
         bugDescription: bugDescription || undefined,
@@ -441,9 +452,26 @@ export default function TasksPage() {
                   </div>
                 )}
 
+                {selectedTask.category === 'google_form' && selectedTask.googleFormVerificationType === 'option2_manual' && (
+                  <div>
+                    <label className="block text-[11px] text-[#029FFC] font-bold mb-1 flex items-center justify-between">
+                      <span>Verification Secret Code *</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Displayed on Form submission screen)</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={secretCode}
+                      onChange={(e) => setSecretCode(e.target.value)}
+                      placeholder="e.g. DB-VERIFY-9982"
+                      className="w-full bg-[#011438] border border-[#029FFC]/50 rounded-xl px-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC] font-mono font-bold"
+                    />
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[11px] text-slate-400 mb-1">
-                    Proof Screenshot URL / Reference
+                    Proof Screenshot URL / Reference *
                   </label>
                   <input
                     type="text"

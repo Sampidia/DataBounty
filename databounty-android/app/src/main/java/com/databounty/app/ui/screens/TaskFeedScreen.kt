@@ -29,7 +29,7 @@ import com.databounty.app.ui.theme.TealAccent
 fun TaskFeedScreen(
     user: UserProfile,
     tasks: List<BountyTask>,
-    onTaskCompleted: (BountyTask, Int) -> Unit
+    onTaskCompleted: (BountyTask, Int, String?, String) -> Unit = { _, _, _, _ -> }
 ) {
     var selectedTask by remember { mutableStateOf<BountyTask?>(null) }
     var selectedCategoryFilter by remember { mutableStateOf<TaskCategory?>(null) }
@@ -123,8 +123,8 @@ fun TaskFeedScreen(
             TaskDetailDialog(
                 task = task,
                 onDismiss = { selectedTask = null },
-                onSubmit = {
-                    onTaskCompleted(task, task.rewardPerUser)
+                onSubmit = { secretCode, proofUrl ->
+                    onTaskCompleted(task, task.rewardPerUser, secretCode, proofUrl)
                     selectedTask = null
                 }
             )
@@ -259,9 +259,13 @@ fun TaskCardItem(
 fun TaskDetailDialog(
     task: BountyTask,
     onDismiss: () -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: (String?, String) -> Unit
 ) {
+    var secretCodeInput by remember { mutableStateOf("") }
     var proofInput by remember { mutableStateOf("") }
+
+    val isOption2 = task.category == TaskCategory.GOOGLE_FORM &&
+            (task.verificationType == VerificationType.OPTION2_MANUAL || task.googleFormVerificationType == "option2_manual")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -298,6 +302,16 @@ fun TaskDetailDialog(
                     color = Color.LightGray
                 )
 
+                if (isOption2) {
+                    OutlinedTextField(
+                        value = secretCodeInput,
+                        onValueChange = { secretCodeInput = it },
+                        label = { Text("Verification Secret Code * (e.g. DB-VERIFY-9982)", fontSize = 11.sp, color = TealAccent) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+
                 OutlinedTextField(
                     value = proofInput,
                     onValueChange = { proofInput = it },
@@ -309,7 +323,11 @@ fun TaskDetailDialog(
         },
         confirmButton = {
             Button(
-                onClick = onSubmit,
+                onClick = {
+                    val code = if (isOption2) secretCodeInput.ifBlank { null } else null
+                    onSubmit(code, proofInput)
+                },
+                enabled = !isOption2 || secretCodeInput.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
             ) {
                 Text("Submit & Earn ₦${task.rewardPerUser}", color = Color.Black, fontWeight = FontWeight.Bold)

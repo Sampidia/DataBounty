@@ -150,10 +150,46 @@ fun MainAppScreen() {
                         indicatorColor = Color(0xFF1F2937)
                     )
                 )
+
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Shield, contentDescription = "Creator") },
+                    label = { Text("Creator Review") },
+                    selected = currentScreen == "creator",
+                    onClick = {
+                        currentScreen = "creator"
+                        navController.navigate("creator")
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = EmeraldPrimary,
+                        selectedTextColor = EmeraldPrimary,
+                        indicatorColor = Color(0xFF1F2937)
+                    )
+                )
             }
         },
         containerColor = Color(0xFF0B0F17)
     ) { padding ->
+        var submissions by remember {
+            mutableStateOf(
+                listOf(
+                    TaskSubmission(
+                        id = "sub_001",
+                        taskId = "task_gf_001",
+                        taskTitle = "Naija E-Commerce Shopping Habits Survey",
+                        userId = "usr_tester_101",
+                        userName = "Amina Bello",
+                        userState = "Lagos",
+                        userGender = "Female",
+                        rewardAmount = 500,
+                        status = "pending",
+                        secretCode = "DB-VERIFY-9982",
+                        proofUrl = "https://images.unsplash.com/photo-proof-1",
+                        submittedAt = "2026-09-18T14:00:00Z"
+                    )
+                )
+            )
+        }
+
         NavHost(
             navController = navController,
             startDestination = "feed",
@@ -163,10 +199,25 @@ fun MainAppScreen() {
                 TaskFeedScreen(
                     user = currentUser,
                     tasks = tasks,
-                    onTaskCompleted = { completedTask, reward ->
+                    onTaskCompleted = { completedTask, reward, secretCode, proofUrl ->
                         tasks = tasks.map { t ->
                             if (t.id == completedTask.id) t.copy(completedSpots = t.completedSpots + 1) else t
                         }
+                        val newSub = TaskSubmission(
+                            id = "sub_${System.currentTimeMillis()}",
+                            taskId = completedTask.id,
+                            taskTitle = completedTask.title,
+                            userId = currentUser.id,
+                            userName = currentUser.name,
+                            userState = currentUser.state,
+                            userGender = currentUser.gender,
+                            rewardAmount = reward,
+                            status = "pending",
+                            secretCode = secretCode,
+                            proofUrl = proofUrl,
+                            submittedAt = "Just now"
+                        )
+                        submissions = listOf(newSub) + submissions
                     }
                 )
             }
@@ -185,6 +236,25 @@ fun MainAppScreen() {
                 ProfileScreen(
                     user = currentUser,
                     onSaveProfile = { updated -> currentUser = updated }
+                )
+            }
+
+            composable("creator") {
+                com.databounty.app.ui.screens.CreatorReviewScreen(
+                    submissions = submissions,
+                    onApproveSubmission = { subId ->
+                        submissions = submissions.map { s ->
+                            if (s.id == subId) {
+                                currentUser = currentUser.copy(walletBalance = currentUser.walletBalance + s.rewardAmount)
+                                s.copy(status = "approved")
+                            } else s
+                        }
+                    },
+                    onRejectSubmission = { subId ->
+                        submissions = submissions.map { s ->
+                            if (s.id == subId) s.copy(status = "rejected") else s
+                        }
+                    }
                 )
             }
         }

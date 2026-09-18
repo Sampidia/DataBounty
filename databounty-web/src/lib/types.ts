@@ -72,6 +72,7 @@ export interface TaskSubmission {
   userGender: string;
   rewardAmount: number;
   status: SubmissionStatus;
+  secretCode?: string;
   proofUrl?: string;
   screenshotUrl?: string;
   bugTitle?: string;

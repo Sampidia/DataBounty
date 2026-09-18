@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { NIGERIAN_STATES, TaskCategory, BountyTask, calculateCreatorFee } from '@/lib/types';
 import { useAuth } from '@/lib/AuthContext';
-import { X, CheckCircle2, ShieldCheck, Code, Globe, Smartphone, FileSpreadsheet, Sparkles, Wallet, CreditCard, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, ShieldCheck, Code, Globe, Smartphone, FileSpreadsheet, Sparkles, Wallet, CreditCard, ArrowRight, Copy, Check } from 'lucide-react';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -40,6 +40,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [formLinkError, setFormLinkError] = useState('');
   const [guideModal, setGuideModal] = useState<'option1' | 'option2' | null>(null);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   // Reset form fields on open to ensure a fresh form every time
   React.useEffect(() => {
@@ -749,12 +750,84 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                   </li>
                   <li>
                     Clear any default code in the script editor and paste the following snippet:
-                    <pre className="mt-1.5 p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre">
+                    <div className="relative mt-2 group">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const codeText = `function onFormSubmit(e) {
+  var url = "https://databounty.sampidia.com/api/webhooks/google-form";
+  var email = "";
+  if (e && e.namedValues) {
+    for (var key in e.namedValues) {
+      if (key.toLowerCase().indexOf("email") !== -1) {
+        email = e.namedValues[key][0];
+        break;
+      }
+    }
+  }
+  if (!email && e && e.values) {
+    for (var i = 0; i < e.values.length; i++) {
+      if (e.values[i] && e.values[i].indexOf("@") !== -1) {
+        email = e.values[i];
+        break;
+      }
+    }
+  }
+  var payload = JSON.stringify({
+    userEmail: email,
+    responses: (e && e.values) ? e.values : [],
+    namedValues: (e && e.namedValues) ? e.namedValues : {}
+  });
+  var options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": payload
+  };
+  UrlFetchApp.fetch(url, options);
+}`;
+                          navigator.clipboard.writeText(codeText);
+                          setCopiedScript(true);
+                          setTimeout(() => setCopiedScript(false), 2000);
+                        }}
+                        className="absolute top-2.5 right-2.5 bg-[#025BE5]/90 hover:bg-[#025BE5] active:scale-95 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md z-10 border border-[#029FFC]/40"
+                        title="Copy Apps Script snippet"
+                      >
+                        {copiedScript ? (
+                          <>
+                            <Check className="w-4 h-4 text-emerald-300" />
+                            <span className="text-emerald-200">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 text-[#029FFC]" />
+                            <span>Copy Code</span>
+                          </>
+                        )}
+                      </button>
+                      <pre className="p-3 pr-32 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-[11px] font-mono text-emerald-300 overflow-x-auto whitespace-pre">
 {`function onFormSubmit(e) {
   var url = "https://databounty.sampidia.com/api/webhooks/google-form";
+  var email = "";
+  if (e && e.namedValues) {
+    for (var key in e.namedValues) {
+      if (key.toLowerCase().indexOf("email") !== -1) {
+        email = e.namedValues[key][0];
+        break;
+      }
+    }
+  }
+  if (!email && e && e.values) {
+    for (var i = 0; i < e.values.length; i++) {
+      if (e.values[i] && e.values[i].indexOf("@") !== -1) {
+        email = e.values[i];
+        break;
+      }
+    }
+  }
   var payload = JSON.stringify({
-    formId: FormApp.getActiveForm() ? FormApp.getActiveForm().getId() : "form_auto",
-    responses: e.values || []
+    userEmail: email,
+    responses: (e && e.values) ? e.values : [],
+    namedValues: (e && e.namedValues) ? e.namedValues : {}
   });
   var options = {
     "method": "post",
@@ -763,7 +836,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   };
   UrlFetchApp.fetch(url, options);
 }`}
-                    </pre>
+                      </pre>
+                    </div>
                   </li>
                   <li>
                     Click <strong>Save</strong> (floppy disk icon), then select <strong>Triggers</strong> (the alarm clock icon on the left sidebar).

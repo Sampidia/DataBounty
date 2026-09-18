@@ -6,21 +6,22 @@ import Footer from '@/components/Footer';
 import CreateTaskModal from '@/components/CreateTaskModal';
 import { TopUpModal } from '@/components/TopUpModal';
 import { useAuth } from '@/lib/AuthContext';
-import { INITIAL_SUBMISSIONS } from '@/lib/store';
-import { BountyTask } from '@/lib/types';
+import { INITIAL_SUBMISSIONS, approveSubmissionInFirestore } from '@/lib/store';
+import { BountyTask, TaskSubmission } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import { BarChart3, PlusCircle, Wallet, CheckCircle2, Clock, Users, MapPin, Sparkles, LogIn, Lock } from 'lucide-react';
+import { BarChart3, PlusCircle, Wallet, CheckCircle2, Clock, Users, MapPin, Sparkles, LogIn, Lock, Check, X, Key, ExternalLink } from 'lucide-react';
 
 export default function CreatorDashboard() {
   const { user, role, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [tasks, setTasks] = useState<BountyTask[]>([]);
-  const [submissions] = useState(INITIAL_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState<TaskSubmission[]>([]);
   const [isLoadingTasks, setIsLoadingTasks] = useState(true);
+  const [processingSubId, setProcessingSubId] = useState<string | null>(null);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
@@ -53,6 +54,55 @@ export default function CreatorDashboard() {
       return () => unsubscribe();
     }
   }, [user?.id]);
+
+  // Fetch submissions for creator's tasks
+  useEffect(() => {
+    if (user?.id) {
+      const subsRef = collection(db, 'submissions');
+      const unsubscribe = onSnapshot(
+        subsRef,
+        (snap) => {
+          if (!snap.empty) {
+            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TaskSubmission));
+            loaded.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+            setSubmissions(loaded);
+          } else {
+            setSubmissions([]);
+          }
+        },
+        (err) => console.warn('[CreatorSubmissions] snapshot error:', err)
+      );
+      return () => unsubscribe();
+    }
+  }, [user?.id]);
+
+  const handleApprove = async (sub: TaskSubmission) => {
+    setProcessingSubId(sub.id);
+    try {
+      await approveSubmissionInFirestore(sub.id, sub.userId, sub.rewardAmount);
+      alert(`Payout of ₦${sub.rewardAmount.toLocaleString()} approved! Wallet credited for tester.`);
+    } catch (err: any) {
+      alert(`Failed to approve submission: ${err.message}`);
+    } finally {
+      setProcessingSubId(null);
+    }
+  };
+
+  const handleReject = async (subId: string) => {
+    setProcessingSubId(subId);
+    try {
+      const subRef = doc(db, 'submissions', subId);
+      await updateDoc(subRef, {
+        status: 'rejected',
+        verifiedAt: new Date().toISOString()
+      });
+      alert('Submission rejected.');
+    } catch (err: any) {
+      alert(`Failed to reject submission: ${err.message}`);
+    } finally {
+      setProcessingSubId(null);
+    }
+  };
 
   // Compute metrics
   const activeTasksCount = tasks.filter((t) => t.status === 'active').length;
@@ -265,6 +315,125 @@ export default function CreatorDashboard() {
                 </div>
               </div>
 
+            </div>
+
+            {/* Option 2 Manual Verification Review & Approval Suite */}
+            <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase border border-amber-500/30">
+                      Option 2 Manual Reviews
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <Key className="w-5 h-5 text-[#029FFC]" />
+                    Option 2 Verification Code & Screenshot Approval Queue
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Verify secret codes submitted by testers against your Google Form confirmation message, then approve instant wallet payouts.
+                  </p>
+                </div>
+              </div>
+
+              {submissions.filter((s) => s.secretCode || s.status === 'pending').length === 0 ? (
+                <div className="p-8 text-center bg-[#011438] rounded-xl border border-[#025BE5]/20 text-slate-400 text-xs">
+                  No Option 2 submissions currently pending manual review.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30">
+                      <tr>
+                        <th className="p-3">Tester</th>
+                        <th className="p-3">Bounty Task</th>
+                        <th className="p-3">Tester Secret Code</th>
+                        <th className="p-3">Proof Screenshot</th>
+                        <th className="p-3">Reward</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
+                      {submissions.filter((s) => s.secretCode || s.status === 'pending').map((sub) => (
+                        <tr key={sub.id} className="hover:bg-[#025BE5]/10">
+                          <td className="p-3 font-semibold text-white">
+                            <div>{sub.userName}</div>
+                            <div className="text-[10px] text-slate-400">{sub.userState} • {sub.userGender}</div>
+                          </td>
+                          <td className="p-3 font-medium text-slate-200 max-w-xs truncate">
+                            {sub.taskTitle}
+                          </td>
+                          <td className="p-3">
+                            {sub.secretCode ? (
+                              <span className="px-2.5 py-1 rounded bg-[#029FFC]/20 text-[#029FFC] font-mono font-bold border border-[#029FFC]/40 text-xs">
+                                {sub.secretCode}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 italic">No code submitted</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {sub.proofUrl ? (
+                              <a
+                                href={sub.proofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-[#029FFC] font-semibold hover:underline flex items-center gap-1 text-[11px]"
+                              >
+                                <span>View Proof</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : (
+                              <span className="text-slate-500">N/A</span>
+                            )}
+                          </td>
+                          <td className="p-3 font-bold text-emerald-400">
+                            ₦{sub.rewardAmount.toLocaleString()}
+                          </td>
+                          <td className="p-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                sub.status === 'approved'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : sub.status === 'rejected'
+                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              }`}
+                            >
+                              {sub.status.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            {sub.status === 'pending' || sub.status === 'pending_verification' ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleApprove(sub)}
+                                  disabled={processingSubId === sub.id}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all shadow-sm disabled:opacity-50"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </button>
+                                <button
+                                  onClick={() => handleReject(sub.id)}
+                                  disabled={processingSubId === sub.id}
+                                  className="px-2.5 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all disabled:opacity-50"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  <span>Reject</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-[11px] text-slate-500 font-semibold">Processed</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             {/* Creator Task Breakdown Table */}
