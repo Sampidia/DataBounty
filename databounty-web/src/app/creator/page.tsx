@@ -25,6 +25,9 @@ export default function CreatorDashboard() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [rejectionModalSub, setRejectionModalSub] = useState<TaskSubmission | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
 
   // Fetch creator's tasks from Firestore with real-time listener
@@ -56,17 +59,19 @@ export default function CreatorDashboard() {
     }
   }, [user?.id]);
 
-  // Fetch submissions for creator's tasks
+  // Fetch submissions ONLY for creator's tasks (Creator Data Isolation)
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && tasks.length > 0) {
+      const creatorTaskIds = tasks.map((t) => t.id);
       const subsRef = collection(db, 'submissions');
       const unsubscribe = onSnapshot(
         subsRef,
         (snap) => {
           if (!snap.empty) {
-            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TaskSubmission));
-            loaded.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
-            setSubmissions(loaded);
+            const allSubs = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TaskSubmission));
+            const creatorSubs = allSubs.filter((s) => creatorTaskIds.includes(s.taskId));
+            creatorSubs.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+            setSubmissions(creatorSubs);
           } else {
             setSubmissions([]);
           }
@@ -74,8 +79,10 @@ export default function CreatorDashboard() {
         (err) => console.warn('[CreatorSubmissions] snapshot error:', err)
       );
       return () => unsubscribe();
+    } else if (tasks.length === 0) {
+      setSubmissions([]);
     }
-  }, [user?.id]);
+  }, [user?.id, tasks]);
 
   const handleApprove = async (sub: TaskSubmission) => {
     setProcessingSubId(sub.id);
@@ -89,19 +96,41 @@ export default function CreatorDashboard() {
     }
   };
 
-  const handleReject = async (subId: string) => {
-    setProcessingSubId(subId);
+  const confirmReject = async () => {
+    if (!rejectionModalSub) return;
+    if (!rejectionReason.trim()) {
+      alert('Please enter a reason for rejecting this submission.');
+      return;
+    }
+    setIsRejecting(true);
     try {
-      const subRef = doc(db, 'submissions', subId);
+      const subRef = doc(db, 'submissions', rejectionModalSub.id);
       await updateDoc(subRef, {
         status: 'rejected',
+        rejectionReason: rejectionReason.trim(),
         verifiedAt: new Date().toISOString()
       });
-      alert('Submission rejected.');
+
+      // Send rejection notification email via API route (Resend)
+      await fetch('/api/email/rejection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionId: rejectionModalSub.id,
+          taskTitle: rejectionModalSub.taskTitle,
+          userName: rejectionModalSub.userName,
+          userEmail: rejectionModalSub.userEmail,
+          rejectionReason: rejectionReason.trim(),
+        }),
+      });
+
+      alert('Submission rejected and notification email dispatched.');
+      setRejectionModalSub(null);
+      setRejectionReason('');
     } catch (err: any) {
       alert(`Failed to reject submission: ${err.message}`);
     } finally {
-      setProcessingSubId(null);
+      setIsRejecting(false);
     }
   };
 
@@ -250,7 +279,7 @@ export default function CreatorDashboard() {
                   onClick={() => setIsTopUpModalOpen(true)}
                   className="text-[11px] text-[#029FFC] font-bold hover:underline block"
                 >
-                  + Top Up Balance via Flutterwave
+                  + Top Up Balance
                 </button>
               </div>
             </div>
@@ -381,7 +410,7 @@ export default function CreatorDashboard() {
                                 onClick={() => setPreviewProofUrl(sub.proofUrl || null)}
                                 className="text-[#029FFC] font-semibold hover:underline flex items-center gap-1 text-[11px]"
                               >
-                                <span>View Proof Inline</span>
+                                <span>View Proof</span>
                                 <ExternalLink className="w-3 h-3" />
                               </button>
                             ) : (
@@ -416,7 +445,10 @@ export default function CreatorDashboard() {
                                   <span>Approve</span>
                                 </button>
                                 <button
-                                  onClick={() => handleReject(sub.id)}
+                                  onClick={() => {
+                                    setRejectionModalSub(sub);
+                                    setRejectionReason('');
+                                  }}
                                   disabled={processingSubId === sub.id}
                                   className="px-2.5 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all disabled:opacity-50"
                                 >
@@ -527,6 +559,66 @@ export default function CreatorDashboard() {
         onClose={() => setIsCreateModalOpen(false)}
         onTaskCreated={handleTaskCreated}
       />
+
+      <TopUpModal
+        isOpen={isTopUpModalOpen}
+        onClose={() => setIsTopUpModalOpen(false)}
+      />
+
+      {/* Rejection Reason Modal */}
+      {rejectionModalSub && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#031F51] border border-red-500/40 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative text-white">
+            <div className="flex items-center justify-between border-b border-red-500/20 pb-3">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <X className="w-5 h-5 text-red-400" />
+                Reject Submission
+              </h3>
+              <button
+                onClick={() => setRejectionModalSub(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-slate-300">
+                You are rejecting submission for <strong className="text-white">{rejectionModalSub.taskTitle}</strong> by <strong className="text-[#029FFC]">{rejectionModalSub.userName}</strong>.
+              </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Reason for Rejection <span className="text-red-400">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g. Invalid secret code, screenshot does not show form submission confirmation..."
+                  className="w-full p-3 rounded-xl bg-[#011438] border border-[#025BE5]/40 text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-red-400"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <button
+                onClick={() => setRejectionModalSub(null)}
+                disabled={isRejecting}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmReject}
+                disabled={isRejecting || !rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-xl text-xs shadow-md disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isRejecting ? 'Rejecting...' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* In-App Proof Screenshot Viewer Modal */}
       {previewProofUrl && (

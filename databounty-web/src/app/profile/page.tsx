@@ -123,7 +123,7 @@ export default function ProfilePage() {
             <div className="border-b border-[#025BE5]/20 pb-6">
               <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                 <User className="w-7 h-7 text-[#029FFC]" />
-                Profile Settings & Wallet Overview
+                Profile &amp; Wallet Overview
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
                 Manage your personal demographic details, bank account, and withdrawal funds.

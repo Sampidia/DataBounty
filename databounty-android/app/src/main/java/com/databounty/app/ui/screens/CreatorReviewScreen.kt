@@ -22,10 +22,19 @@ import com.databounty.app.ui.theme.TealAccent
 @Composable
 fun CreatorReviewScreen(
     submissions: List<TaskSubmission>,
+    creatorTaskIds: List<String> = emptyList(),
     onApproveSubmission: (String) -> Unit,
-    onRejectSubmission: (String) -> Unit
+    onRejectSubmission: (String, String) -> Unit
 ) {
-    val option2Submissions = submissions.filter { it.secretCode != null || it.status == "pending" }
+    var rejectingSub by remember { mutableStateOf<TaskSubmission?>(null) }
+    var rejectionReasonInput by remember { mutableStateOf("") }
+
+    val filteredSubmissions = if (creatorTaskIds.isNotEmpty()) {
+        submissions.filter { creatorTaskIds.contains(it.taskId) }
+    } else {
+        submissions
+    }
+    val option2Submissions = filteredSubmissions.filter { it.secretCode != null || it.status == "pending" }
 
     Scaffold(
         topBar = {
@@ -187,7 +196,10 @@ fun CreatorReviewScreen(
                                         }
 
                                         Button(
-                                            onClick = { onRejectSubmission(sub.id) },
+                                            onClick = {
+                                                rejectingSub = sub
+                                                rejectionReasonInput = ""
+                                            },
                                             modifier = Modifier.weight(1f),
                                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
                                         ) {
@@ -208,6 +220,63 @@ fun CreatorReviewScreen(
                 }
             }
         }
+    }
+
+    // Rejection Reason Dialog
+    rejectingSub?.let { sub ->
+        AlertDialog(
+            onDismissRequest = { rejectingSub = null },
+            title = {
+                Text(
+                    text = "Reject Submission",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = Color.White
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Rejecting submission by ${sub.userName} for task: ${sub.taskTitle}",
+                        fontSize = 12.sp,
+                        color = Color.LightGray
+                    )
+                    OutlinedTextField(
+                        value = rejectionReasonInput,
+                        onValueChange = { rejectionReasonInput = it },
+                        label = { Text("Reason for Rejection *") },
+                        placeholder = { Text("e.g. Invalid secret code") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = Color(0xFF111827),
+                            unfocusedContainerColor = Color(0xFF111827),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (rejectionReasonInput.isNotBlank()) {
+                            onRejectSubmission(sub.id, rejectionReasonInput.trim())
+                            rejectingSub = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
+                    enabled = rejectionReasonInput.isNotBlank()
+                ) {
+                    Text("Confirm Rejection", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { rejectingSub = null }) {
+                    Text("Cancel", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF031F51)
+        )
     }
 }
 

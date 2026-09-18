@@ -106,6 +106,22 @@ export async function createFirestoreTask(task: BountyTask, isPaidFromWallet: bo
 
 export async function submitTaskProofToFirestore(submission: TaskSubmission): Promise<void> {
   try {
+    // Check if user already submitted for this task (excluding rejected submissions)
+    if (submission.taskId && submission.userId) {
+      const existingQuery = query(
+        collection(db, 'submissions'),
+        where('taskId', '==', submission.taskId),
+        where('userId', '==', submission.userId)
+      );
+      const existingSnap = await getDocs(existingQuery);
+      const activeExisting = existingSnap.docs.filter(
+        (d) => d.data().status !== 'rejected'
+      );
+      if (activeExisting.length > 0) {
+        throw new Error('You have already submitted proof for this task.');
+      }
+    }
+
     const cleanSubmission = sanitizeForFirestore(submission);
     const subRef = doc(db, 'submissions', submission.id);
     await setDoc(subRef, cleanSubmission);

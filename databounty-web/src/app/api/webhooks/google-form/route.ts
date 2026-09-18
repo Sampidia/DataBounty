@@ -56,12 +56,11 @@ export async function POST(request: Request) {
 
       snap.forEach((d) => {
         const data = d.data();
-        if (
-          data.userId &&
-          (data.userEmail?.toLowerCase() === cleanEmail ||
-           data.userName?.toLowerCase().includes(cleanEmail.split('@')[0]) ||
-           (taskId && data.taskId === taskId))
-        ) {
+        const subEmail = (data.userEmail || '').trim().toLowerCase();
+        const emailMatch = subEmail === cleanEmail;
+        const taskMatch = taskId ? data.taskId === taskId : true;
+
+        if (data.userId && emailMatch && taskMatch) {
           matchedDoc = { id: d.id, ...data };
         }
       });

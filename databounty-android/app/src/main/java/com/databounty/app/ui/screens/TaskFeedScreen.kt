@@ -29,6 +29,7 @@ import com.databounty.app.ui.theme.TealAccent
 fun TaskFeedScreen(
     user: UserProfile,
     tasks: List<BountyTask>,
+    existingSubmissions: List<TaskSubmission> = emptyList(),
     onTaskCompleted: (BountyTask, Int, String?, String) -> Unit = { _, _, _, _ -> }
 ) {
     var selectedTask by remember { mutableStateOf<BountyTask?>(null) }
@@ -109,10 +110,12 @@ fun TaskFeedScreen(
                 contentPadding = PaddingValues(bottom = 80.dp)
             ) {
                 items(filteredTasks) { task ->
+                    val hasSubmitted = existingSubmissions.any { it.taskId == task.id && it.userId == user.id && it.status != "rejected" }
                     TaskCardItem(
                         task = task,
                         user = user,
-                        onClick = { selectedTask = task }
+                        hasSubmitted = hasSubmitted,
+                        onClick = { if (!hasSubmitted) selectedTask = task }
                     )
                 }
             }
@@ -136,19 +139,21 @@ fun TaskFeedScreen(
 fun TaskCardItem(
     task: BountyTask,
     user: UserProfile,
+    hasSubmitted: Boolean = false,
     onClick: () -> Unit
 ) {
     val progress = (task.completedSpots.toFloat() / task.totalSpots.toFloat()).coerceIn(0f, 1f)
     val isEligible = (task.targetState.equals("All", ignoreCase = true) || task.targetState.equals(user.state, ignoreCase = true)) &&
             (task.targetGender.equals("All", ignoreCase = true) || task.targetGender.equals(user.gender, ignoreCase = true))
+    val isClickable = isEligible && !hasSubmitted
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = isEligible, onClick = onClick),
+            .clickable(enabled = isClickable, onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF111827)),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF1F2937))
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (hasSubmitted) TealAccent else Color(0xFF1F2937))
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -159,17 +164,38 @@ fun TaskCardItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    color = Color(0xFF1F2937),
-                    shape = RoundedCornerShape(8.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = task.category.name.replace("_", " "),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TealAccent,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Surface(
+                        color = Color(0xFF1F2937),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = task.category.name.replace("_", " "),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TealAccent,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    if (hasSubmitted) {
+                        Surface(
+                            color = Color(0xFF025BE5).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, TealAccent)
+                        ) {
+                            Text(
+                                text = "Submitted",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TealAccent,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                 }
 
                 Text(

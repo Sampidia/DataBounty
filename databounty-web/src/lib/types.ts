@@ -69,6 +69,7 @@ export interface TaskSubmission {
   taskTitle: string;
   userId: string;
   userName: string;
+  userEmail: string;
   userState: string;
   userGender: string;
   rewardAmount: number;
@@ -79,6 +80,7 @@ export interface TaskSubmission {
   bugTitle?: string;
   bugSeverity?: 'Low' | 'Medium' | 'High' | 'Critical';
   bugDescription?: string;
+  rejectionReason?: string;
   submittedAt: string;
   verifiedAt?: string;
 }

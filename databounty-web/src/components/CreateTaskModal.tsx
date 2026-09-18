@@ -350,7 +350,16 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-[#029FFC]">Option 1 (Recommended)</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            googleFormVerificationType === 'option1_webhook' ? 'border-[#029FFC] bg-[#029FFC]' : 'border-slate-500'
+                          }`}>
+                            {googleFormVerificationType === 'option1_webhook' && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <span className="font-bold text-[#029FFC]">Option 1 (Recommended)</span>
+                        </div>
                         <span className="text-[10px] bg-[#025BE5]/30 text-[#029FFC] px-1.5 py-0.5 rounded font-bold">Auto Payout</span>
                       </div>
                       <p className="text-[11px] text-slate-300">
@@ -377,7 +386,16 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-slate-200">Option 2</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                            googleFormVerificationType === 'option2_manual' ? 'border-[#029FFC] bg-[#029FFC]' : 'border-slate-500'
+                          }`}>
+                            {googleFormVerificationType === 'option2_manual' && (
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            )}
+                          </div>
+                          <span className="font-bold text-slate-200">Option 2</span>
+                        </div>
                         <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">Manual Review</span>
                       </div>
                       <p className="text-[11px] text-slate-300">

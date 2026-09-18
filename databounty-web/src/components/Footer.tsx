@@ -34,7 +34,7 @@ export default function Footer() {
           </div>
 
           {/* Col 2: Quick Navigation */}
-          <div>
+          <div className="md:pl-6">
             <h4 className="text-sm font-semibold text-white mb-3">Quick Navigation</h4>
             <ul className="space-y-2">
               <li>
@@ -52,17 +52,27 @@ export default function Footer() {
                   Profile & Bank Account Setup
                 </Link>
               </li>
+              <li>
+                <Link href="/privacy" className="hover:text-[#029FFC] transition-colors">
+                  Privacy Policy (NDPR)
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-[#029FFC] transition-colors">
+                  Terms & Conditions
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Col 4: Verification Guarantee */}
+          {/* Col 3: Verification Guarantee */}
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-white flex items-center gap-1.5">
               <HeartHandshake className="w-4 h-4 text-[#029FFC]" />
               Automated Payout Engine
             </h4>
             <p className="text-slate-300 leading-relaxed">
-              Google Forms with Option 1 Google Sheet Webhook trigger instant automated wallet payouts as soon as form responses are recorded.
+              Google Forms with Option 1 Google Sheet Webhook trigger instant automated wallet payouts.
             </p>
             <div className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-slate-300 flex items-center justify-between">
               <span>Minimum Payout Threshold:</span>
@@ -74,11 +84,13 @@ export default function Footer() {
 
         <div className="border-t border-[#025BE5]/20 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between text-slate-400 text-[11px]">
           <p>© {new Date().getFullYear()} DataBounty Nigeria. All rights reserved.</p>
-          <div className="flex gap-4 mt-2 sm:mt-0">
-            <span>Built for Nigerian Creators & Testers</span>
+          <div className="flex flex-wrap gap-4 mt-2 sm:mt-0 items-center justify-center">
+            <Link href="/privacy" className="hover:text-[#029FFC]">Privacy Policy</Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-[#029FFC]">Terms of Service</Link>
             <span>•</span>
             <a href="mailto:support@databounty.sampidia.com" className="hover:text-[#029FFC]">
-              Need Help? Contact Support
+              Support
             </a>
           </div>
         </div>

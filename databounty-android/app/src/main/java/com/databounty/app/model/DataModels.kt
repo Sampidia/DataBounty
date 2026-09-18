@@ -147,11 +147,13 @@ data class TaskSubmission(
     val taskTitle: String,
     val userId: String,
     val userName: String,
+    val userEmail: String = "",
     val userState: String,
     val userGender: String,
     val rewardAmount: Int,
     val status: String = "pending", // "pending", "approved", "rejected"
     val secretCode: String? = null,
     val proofUrl: String? = null,
+    val rejectionReason: String? = null,
     val submittedAt: String = ""
 )
