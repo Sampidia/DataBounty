@@ -82,19 +82,21 @@ export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
   return [];
 }
 
-export async function createFirestoreTask(task: BountyTask): Promise<void> {
+export async function createFirestoreTask(task: BountyTask, isPaidFromWallet: boolean = false): Promise<void> {
   try {
     const cleanTask = sanitizeForFirestore(task);
     const taskRef = doc(db, 'tasks', task.id);
     await setDoc(taskRef, cleanTask);
 
-    // Deduct total budget + fee from creator escrow
     if (task.creatorId) {
       const userRef = doc(db, 'users', task.creatorId);
-      await updateDoc(userRef, {
-        walletBalance: increment(-task.totalBudget),
+      const updates: Record<string, any> = {
         escrowBalance: increment(task.totalBudget)
-      });
+      };
+      if (isPaidFromWallet) {
+        updates.walletBalance = increment(-task.totalBudget);
+      }
+      await updateDoc(userRef, updates);
     }
   } catch (err: any) {
     console.error('[Firestore] createFirestoreTask FAILED:', err);
@@ -107,13 +109,52 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
     const cleanSubmission = sanitizeForFirestore(submission);
     const subRef = doc(db, 'submissions', submission.id);
     await setDoc(subRef, cleanSubmission);
+
+    if (submission.taskId) {
+      const taskRef = doc(db, 'tasks', submission.taskId);
+      const taskSnap = await getDoc(taskRef);
+      if (taskSnap.exists()) {
+        const tData = taskSnap.data();
+        const newCompleted = (tData.completedSpots || 0) + 1;
+        const updates: Record<string, any> = {
+          completedSpots: increment(1),
+          reservedSpots: increment(-1)
+        };
+        if (newCompleted >= (tData.totalSpots || 1)) {
+          updates.status = 'completed';
+        }
+        await updateDoc(taskRef, updates);
+      }
+    }
   } catch (err: any) {
     console.error('[Firestore] submitTaskProofToFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to submit proof. Please try again.');
   }
 }
 
-export async function approveSubmissionInFirestore(submissionId: string, userId: string, rewardAmount: number): Promise<void> {
+export async function reserveTaskSpotInFirestore(taskId: string): Promise<void> {
+  try {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, {
+      reservedSpots: increment(1)
+    });
+  } catch (err) {
+    console.warn('[Firestore] reserveTaskSpot error:', err);
+  }
+}
+
+export async function releaseTaskSpotInFirestore(taskId: string): Promise<void> {
+  try {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, {
+      reservedSpots: increment(-1)
+    });
+  } catch (err) {
+    console.warn('[Firestore] releaseTaskSpot error:', err);
+  }
+}
+
+export async function approveSubmissionInFirestore(submissionId: string, userId: string, rewardAmount: number, taskId?: string): Promise<void> {
   try {
     const subRef = doc(db, 'submissions', submissionId);
     await updateDoc(subRef, {
@@ -126,6 +167,22 @@ export async function approveSubmissionInFirestore(submissionId: string, userId:
     await updateDoc(userRef, {
       walletBalance: increment(rewardAmount)
     });
+
+    if (taskId) {
+      const taskRef = doc(db, 'tasks', taskId);
+      const taskSnap = await getDoc(taskRef);
+      if (taskSnap.exists()) {
+        const tData = taskSnap.data();
+        const newCompleted = (tData.completedSpots || 0) + 1;
+        const updates: Record<string, any> = {
+          completedSpots: increment(1)
+        };
+        if (newCompleted >= (tData.totalSpots || 1)) {
+          updates.status = 'completed';
+        }
+        await updateDoc(taskRef, updates);
+      }
+    }
   } catch (err: any) {
     console.error('[Firestore] approveSubmissionInFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to approve submission. Please try again.');
@@ -146,6 +203,33 @@ export async function requestWithdrawalInFirestore(wd: WithdrawalRequest): Promi
   } catch (err: any) {
     console.error('[Firestore] requestWithdrawalInFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to save withdrawal request. Please try again.');
+  }
+}
+
+export async function uploadImageToImgBB(file: File): Promise<string> {
+  const apiKey = process.env.NEXT_PUBLIC_IMGBB_API_KEY || '3f2e1a90b48c6d7e8f9a0b1c2d3e4f5a';
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const res = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: 'POST',
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success && data.data?.url) {
+      return data.data.url;
+    } else {
+      throw new Error(data.error?.message || 'ImgBB upload failed');
+    }
+  } catch (err: any) {
+    console.warn('[ImgBB Upload Fallback] Client FileReader Data URL fallback:', err);
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+      reader.readAsDataURL(file);
+    });
   }
 }
 

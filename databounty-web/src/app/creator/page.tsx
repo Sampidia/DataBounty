@@ -25,6 +25,7 @@ export default function CreatorDashboard() {
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
+  const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
 
   // Fetch creator's tasks from Firestore with real-time listener
   useEffect(() => {
@@ -375,15 +376,14 @@ export default function CreatorDashboard() {
                           </td>
                           <td className="p-3">
                             {sub.proofUrl ? (
-                              <a
-                                href={sub.proofUrl}
-                                target="_blank"
-                                rel="noreferrer"
+                              <button
+                                type="button"
+                                onClick={() => setPreviewProofUrl(sub.proofUrl || null)}
                                 className="text-[#029FFC] font-semibold hover:underline flex items-center gap-1 text-[11px]"
                               >
-                                <span>View Proof</span>
+                                <span>View Proof Inline</span>
                                 <ExternalLink className="w-3 h-3" />
-                              </a>
+                              </button>
                             ) : (
                               <span className="text-slate-500">N/A</span>
                             )}
@@ -528,10 +528,57 @@ export default function CreatorDashboard() {
         onTaskCreated={handleTaskCreated}
       />
 
-      <TopUpModal
-        isOpen={isTopUpModalOpen}
-        onClose={() => setIsTopUpModalOpen(false)}
-      />
+      {/* In-App Proof Screenshot Viewer Modal */}
+      {previewProofUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-[#031F51] border border-[#025BE5]/40 rounded-2xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative text-white">
+            <div className="flex items-center justify-between border-b border-[#025BE5]/20 pb-3">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Key className="w-4 h-4 text-[#029FFC]" />
+                Tester Proof Screenshot Preview
+              </h3>
+              <button
+                onClick={() => setPreviewProofUrl(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto rounded-xl bg-[#011438] p-3 border border-[#025BE5]/20 flex items-center justify-center">
+              {previewProofUrl.startsWith('data:image') || previewProofUrl.startsWith('http') ? (
+                <img
+                  src={previewProofUrl}
+                  alt="Tester Proof Screenshot"
+                  className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
+                />
+              ) : (
+                <div className="p-8 text-center text-xs text-slate-300">
+                  Proof Link: <a href={previewProofUrl} target="_blank" rel="noreferrer" className="text-[#029FFC] underline font-mono">{previewProofUrl}</a>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between items-center pt-1">
+              <a
+                href={previewProofUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-[#029FFC] hover:underline flex items-center gap-1 font-semibold"
+              >
+                <span>Open in External Tab</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <button
+                onClick={() => setPreviewProofUrl(null)}
+                className="px-4 py-2 bg-[#025BE5] hover:bg-[#0379FA] text-white font-bold rounded-xl text-xs shadow-md"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

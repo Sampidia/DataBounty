@@ -263,21 +263,54 @@ fun TaskDetailDialog(
 ) {
     var secretCodeInput by remember { mutableStateOf("") }
     var proofInput by remember { mutableStateOf("") }
+    var timerSeconds by remember { mutableStateOf(1800) }
+
+    LaunchedEffect(key1 = timerSeconds) {
+        if (timerSeconds > 0) {
+            kotlinx.coroutines.delay(1000L)
+            timerSeconds -= 1
+        }
+    }
 
     val isOption2 = task.category == TaskCategory.GOOGLE_FORM &&
             (task.verificationType == VerificationType.OPTION2_MANUAL || task.googleFormVerificationType == "option2_manual")
+
+    val minutes = timerSeconds / 60
+    val seconds = timerSeconds % 60
+    val timerString = String.format("%02d:%02d", minutes, seconds)
 
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Color(0xFF111827),
         title = {
             Column {
-                Text(
-                    text = task.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color.White
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = task.title,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Surface(
+                        color = if (timerSeconds > 0) Color(0xFF031F51) else Color(0xFF450A0A),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (timerSeconds > 0) TealAccent else Color.Red)
+                    ) {
+                        Text(
+                            text = if (timerSeconds > 0) "⏱ $timerString" else "Expired",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (timerSeconds > 0) TealAccent else Color.Red,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
                 Text(
                     text = "Bounty Reward: ₦${task.rewardPerUser}",
                     fontSize = 13.sp,
@@ -308,6 +341,7 @@ fun TaskDetailDialog(
                         onValueChange = { secretCodeInput = it },
                         label = { Text("Verification Secret Code * (e.g. DB-VERIFY-9982)", fontSize = 11.sp, color = TealAccent) },
                         modifier = Modifier.fillMaxWidth(),
+                        enabled = timerSeconds > 0,
                         singleLine = true
                     )
                 }
@@ -315,10 +349,20 @@ fun TaskDetailDialog(
                 OutlinedTextField(
                     value = proofInput,
                     onValueChange = { proofInput = it },
-                    label = { Text("Proof Screenshot URL / Notes", fontSize = 11.sp) },
+                    label = { Text("Proof Screenshot URL / Notes (or https://ibb.co/...)", fontSize = 11.sp) },
                     modifier = Modifier.fillMaxWidth(),
+                    enabled = timerSeconds > 0,
                     singleLine = true
                 )
+
+                if (timerSeconds == 0) {
+                    Text(
+                        text = "Reservation Expired: 30-min spot timer reached 0:00. Spot released to task pool.",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
+                    )
+                }
             }
         },
         confirmButton = {
@@ -327,10 +371,14 @@ fun TaskDetailDialog(
                     val code = if (isOption2) secretCodeInput.ifBlank { null } else null
                     onSubmit(code, proofInput)
                 },
-                enabled = !isOption2 || secretCodeInput.isNotBlank(),
+                enabled = timerSeconds > 0 && (!isOption2 || secretCodeInput.isNotBlank()),
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
             ) {
-                Text("Submit & Earn ₦${task.rewardPerUser}", color = Color.Black, fontWeight = FontWeight.Bold)
+                Text(
+                    text = if (timerSeconds == 0) "Expired" else "Submit & Earn ₦${task.rewardPerUser}",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {

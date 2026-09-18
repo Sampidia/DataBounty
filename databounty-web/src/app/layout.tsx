@@ -25,9 +25,26 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: "DataBounty - Micro-Tasking & QA Testing Platform",
-    description: "Earn naira by testing digital products or hire vetted Nigerian QA testers.",
-    images: ["/Databounty_logo.webp"],
+    title: "DataBounty - Nigeria's Premier Micro-Tasking & QA Testing Platform",
+    description: "Earn naira by completing micro-tasks & testing app products, or hire vetted Nigerian testers with automated escrow payouts.",
+    url: "https://databounty.sampidia.com",
+    siteName: "DataBounty Nigeria",
+    images: [
+      {
+        url: "/databounty-og.png",
+        width: 1200,
+        height: 630,
+        alt: "DataBounty Nigeria Social Preview",
+      },
+    ],
+    locale: "en_NG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "DataBounty - Paid Micro-Testing Platform",
+    description: "Post bounty tasks, complete surveys & app testing, and cash out to any Nigerian bank.",
+    images: ["/databounty-og.png"],
   },
 };
 

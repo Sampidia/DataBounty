@@ -84,8 +84,14 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
       <div className="space-y-3 pt-2 border-t border-[#025BE5]/20">
         <div className="space-y-1">
           <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-            <span>Spots Taken: {task.completedSpots} / {task.totalSpots}</span>
-            <span className="text-[#029FFC] font-bold">{percentage}%</span>
+            <span>Spots Completed: {task.completedSpots} / {task.totalSpots}</span>
+            {task.reservedSpots && task.reservedSpots > 0 ? (
+              <span className="text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 text-[10px]">
+                {task.reservedSpots} Active Claim{task.reservedSpots > 1 ? 's' : ''}
+              </span>
+            ) : (
+              <span className="text-[#029FFC] font-bold">{percentage}%</span>
+            )}
           </div>
           <div className="w-full bg-[#011438] h-2 rounded-full overflow-hidden border border-[#025BE5]/20">
             <div

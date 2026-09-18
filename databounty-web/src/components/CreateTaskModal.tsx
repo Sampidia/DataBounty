@@ -82,9 +82,9 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     return cleanUrl.startsWith('https://docs.google.com/forms/') || cleanUrl.startsWith('https://forms.gle/');
   };
 
-  const saveAndPublishTask = async (newTask: BountyTask) => {
+  const saveAndPublishTask = async (newTask: BountyTask, isPaidFromWallet: boolean = false) => {
     try {
-      await createFirestoreTask(newTask);
+      await createFirestoreTask(newTask, isPaidFromWallet);
       onTaskCreated(newTask);
       onClose();
     } catch (err: any) {
@@ -154,7 +154,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
         return;
       }
       await updateUser({ walletBalance: userWalletBalance - totalDepositRequired });
-      await saveAndPublishTask(newTask);
+      await saveAndPublishTask(newTask, true);
     } else if (paymentOption === 'flutterwave' || paymentOption === 'split') {
       const flwAmount = paymentOption === 'split' ? remainingFlutterwaveAmount : totalDepositRequired;
 

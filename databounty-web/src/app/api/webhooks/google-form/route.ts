@@ -80,9 +80,21 @@ export async function POST(request: Request) {
         await updateDoc(doc(db, 'users', rewardedUserId), {
           walletBalance: increment(rewardAmount)
         });
+
+        // Increment task completed spots in Firestore
+        if (matchedDoc.taskId) {
+          const taskRef = doc(db, 'tasks', matchedDoc.taskId);
+          await updateDoc(taskRef, {
+            completedSpots: increment(1),
+            reservedSpots: increment(-1)
+          });
+        }
+        console.log(`[Google Form Webhook Option 1 SUCCESS] Approved submission ${matchedDoc.id} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
+      } else {
+        console.log(`[Google Form Webhook Option 1 NOTICE] Received response for ${cleanEmail}, but no active pending_verification claim found.`);
       }
     } catch (fsErr) {
-      console.warn('[Webhook Firestore Fallback]', fsErr);
+      console.warn('[Webhook Firestore Error]', fsErr);
     }
 
     return NextResponse.json({

@@ -45,6 +45,7 @@ export interface BountyTask {
   rewardPerUser: number;
   totalSpots: number;
   completedSpots: number;
+  reservedSpots?: number;
   status: 'active' | 'completed' | 'paused';
   formLink?: string;
   appDownloadUrl?: string;
