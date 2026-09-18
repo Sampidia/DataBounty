@@ -18,7 +18,7 @@ export default function Footer() {
                   alt="DataBounty Logo" 
                   width={400} 
                   height={200} 
-                  className="object-contain h-13 sm:h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
+                  className="object-contain h-13 sm:h-14 w-auto"
                 />
               </div>
             </div>

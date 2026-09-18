@@ -65,6 +65,7 @@ fun findBankByTag(tagOrName: String): BankInfo {
 
 data class BountyTask(
     val id: String,
+    val creatorId: String? = null,
     val creatorName: String,
     val title: String,
     val description: String,
@@ -76,10 +77,15 @@ data class BountyTask(
     val targetState: String = "All",
     val targetGender: String = "All",
     val verificationType: VerificationType = VerificationType.OPTION1_WEBHOOK,
+    val googleFormVerificationType: String? = null,
+    val webhookSecret: String? = null,
     val formLink: String? = null,
     val appDownloadUrl: String? = null,
     val websiteUrl: String? = null,
-    val testInstructions: String = ""
+    val testInstructions: String = "",
+    val creatorFeePaid: Int? = null,
+    val totalBudget: Int? = null,
+    val createdAt: String? = null
 )
 
 data class UserProfile(

@@ -124,19 +124,24 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       totalSpots,
       completedSpots: 0,
       status: 'active',
-      formLink: category === 'google_form' ? formLink : undefined,
-      appDownloadUrl: category === 'app_test' ? appDownloadUrl : undefined,
-      websiteUrl: category === 'web_bug' ? websiteUrl : undefined,
       testInstructions: testInstructions || 'Follow campaign guidelines carefully.',
       targetCountry,
       targetState,
       targetGender,
-      googleFormVerificationType: category === 'google_form' ? googleFormVerificationType : undefined,
-      webhookSecret: category === 'google_form' ? `whsec_${Math.random().toString(36).substring(2, 10)}` : undefined,
       creatorFeePaid: creatorFee,
       totalBudget,
       createdAt: new Date().toISOString()
     };
+
+    if (category === 'google_form') {
+      if (formLink) newTask.formLink = formLink;
+      if (googleFormVerificationType) newTask.googleFormVerificationType = googleFormVerificationType;
+      newTask.webhookSecret = `whsec_${Math.random().toString(36).substring(2, 10)}`;
+    } else if (category === 'app_test') {
+      if (appDownloadUrl) newTask.appDownloadUrl = appDownloadUrl;
+    } else if (category === 'web_bug') {
+      if (websiteUrl) newTask.websiteUrl = websiteUrl;
+    }
 
     const publicKey = process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-566b744d0c159ec3220d04b66f4ee18e-X';
 

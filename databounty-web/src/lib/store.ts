@@ -49,6 +49,23 @@ export const INITIAL_SUBMISSIONS: TaskSubmission[] = [];
 export const INITIAL_WITHDRAWALS: WithdrawalRequest[] = [];
 export const INITIAL_TRANSACTIONS: Transaction[] = [];
 
+// Helper to strip undefined values so Firestore setDoc/updateDoc never fails with unsupported field errors
+export function sanitizeForFirestore<T>(obj: T): T {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeForFirestore) as unknown as T;
+  }
+  const cleanObj: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      cleanObj[key] = sanitizeForFirestore(value);
+    }
+  }
+  return cleanObj as T;
+}
+
 // --- FIRESTORE PERSISTENCE SERVICES ---
 
 export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
@@ -67,8 +84,9 @@ export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
 
 export async function createFirestoreTask(task: BountyTask): Promise<void> {
   try {
+    const cleanTask = sanitizeForFirestore(task);
     const taskRef = doc(db, 'tasks', task.id);
-    await setDoc(taskRef, task);
+    await setDoc(taskRef, cleanTask);
 
     // Deduct total budget + fee from creator escrow
     if (task.creatorId) {
@@ -86,8 +104,9 @@ export async function createFirestoreTask(task: BountyTask): Promise<void> {
 
 export async function submitTaskProofToFirestore(submission: TaskSubmission): Promise<void> {
   try {
+    const cleanSubmission = sanitizeForFirestore(submission);
     const subRef = doc(db, 'submissions', submission.id);
-    await setDoc(subRef, submission);
+    await setDoc(subRef, cleanSubmission);
   } catch (err: any) {
     console.error('[Firestore] submitTaskProofToFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to submit proof. Please try again.');
@@ -115,8 +134,9 @@ export async function approveSubmissionInFirestore(submissionId: string, userId:
 
 export async function requestWithdrawalInFirestore(wd: WithdrawalRequest): Promise<void> {
   try {
+    const cleanWd = sanitizeForFirestore(wd);
     const wdRef = doc(db, 'withdrawals', wd.id);
-    await setDoc(wdRef, wd);
+    await setDoc(wdRef, cleanWd);
 
     // Deduct gross amount from tester wallet
     const userRef = doc(db, 'users', wd.userId);
