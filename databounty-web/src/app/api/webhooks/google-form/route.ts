@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, getDoc, updateDoc, increment } from 'firebase/firestore';
 
 export async function POST(request: Request) {
   try {
@@ -35,6 +35,7 @@ export async function POST(request: Request) {
     }
 
     if (!userEmail) {
+      console.warn('[Google Form Webhook] Webhook rejected: missing userEmail in payload:', body);
       return NextResponse.json(
         { error: 'Missing required parameter: userEmail or email response' },
         { status: 400 }
@@ -49,51 +50,73 @@ export async function POST(request: Request) {
     let matchedDoc: any = null;
 
     try {
-      // Find matching pending submission in Firestore
+      // Find matching pending submission in Firestore (check both pending_verification & pending)
       const subsRef = collection(db, 'submissions');
-      const q = query(subsRef, where('status', '==', 'pending_verification'));
+      const q = query(subsRef, where('status', 'in', ['pending_verification', 'pending']));
       const snap = await getDocs(q);
 
-      snap.forEach((d) => {
+      for (const d of snap.docs) {
         const data = d.data();
+        let emailMatch = false;
+
         const subEmail = (data.userEmail || '').trim().toLowerCase();
-        const emailMatch = subEmail === cleanEmail;
+        if (subEmail && subEmail === cleanEmail) {
+          emailMatch = true;
+        } else if (data.userId) {
+          // Fallback: Check registered user profile in users/{userId} collection
+          try {
+            const userSnap = await getDoc(doc(db, 'users', data.userId));
+            if (userSnap.exists()) {
+              const profileEmail = (userSnap.data().email || '').trim().toLowerCase();
+              if (profileEmail && profileEmail === cleanEmail) {
+                emailMatch = true;
+              }
+            }
+          } catch (uErr) {
+            console.warn(`[Webhook Profile Lookup Warning] Could not fetch user ${data.userId}:`, uErr);
+          }
+        }
+
         const taskMatch = taskId ? data.taskId === taskId : true;
 
         if (data.userId && emailMatch && taskMatch) {
           matchedDoc = { id: d.id, ...data };
+          break; // Found matching claim
         }
-      });
+      }
 
       if (matchedDoc) {
         rewardedUserId = matchedDoc.userId;
         rewardAmount = matchedDoc.rewardAmount || 500;
 
-        // Approve submission
-        await updateDoc(doc(db, 'submissions', matchedDoc.id), {
+        // Approve submission document
+        await setDoc(doc(db, 'submissions', matchedDoc.id), {
           status: 'approved',
           verifiedAt: new Date().toISOString()
-        });
+        }, { merge: true });
 
-        // Increment user balance
-        await updateDoc(doc(db, 'users', rewardedUserId), {
+        // Increment user wallet balance atomically (resilient setDoc merge)
+        await setDoc(doc(db, 'users', rewardedUserId), {
           walletBalance: increment(rewardAmount)
-        });
+        }, { merge: true });
 
-        // Increment task completed spots in Firestore
+        // Update task spots
         if (matchedDoc.taskId) {
-          const taskRef = doc(db, 'tasks', matchedDoc.taskId);
-          await updateDoc(taskRef, {
-            completedSpots: increment(1),
-            reservedSpots: increment(-1)
-          });
+          try {
+            await setDoc(doc(db, 'tasks', matchedDoc.taskId), {
+              completedSpots: increment(1),
+              reservedSpots: increment(-1)
+            }, { merge: true });
+          } catch (tErr) {
+            console.warn('[Webhook Task Spot Update Warning]', tErr);
+          }
         }
         console.log(`[Google Form Webhook Option 1 SUCCESS] Approved submission ${matchedDoc.id} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
       } else {
-        console.log(`[Google Form Webhook Option 1 NOTICE] Received response for ${cleanEmail}, but no active pending_verification claim found.`);
+        console.log(`[Google Form Webhook Option 1 NOTICE] Received response for ${cleanEmail}, but no active pending submission claim found matching email.`);
       }
     } catch (fsErr) {
-      console.warn('[Webhook Firestore Error]', fsErr);
+      console.error('[Webhook Firestore Processing Error]', fsErr);
     }
 
     return NextResponse.json({
@@ -105,6 +128,7 @@ export async function POST(request: Request) {
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
+    console.error('[Google Form Webhook Fatal Error]', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -775,17 +775,21 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                           const codeText = `function onFormSubmit(e) {
   var url = "https://databounty.sampidia.com/api/webhooks/google-form";
   var email = "";
-  if (e && e.namedValues) {
+  if (e && e.response && typeof e.response.getRespondentEmail === "function") {
+    email = e.response.getRespondentEmail();
+  }
+  if (!email && e && e.namedValues) {
     for (var key in e.namedValues) {
       if (key.toLowerCase().indexOf("email") !== -1) {
-        email = e.namedValues[key][0];
+        var val = e.namedValues[key];
+        email = Array.isArray(val) ? val[0] : val;
         break;
       }
     }
   }
   if (!email && e && e.values) {
     for (var i = 0; i < e.values.length; i++) {
-      if (e.values[i] && e.values[i].indexOf("@") !== -1) {
+      if (e.values[i] && typeof e.values[i] === "string" && e.values[i].indexOf("@") !== -1) {
         email = e.values[i];
         break;
       }
@@ -826,17 +830,21 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
 {`function onFormSubmit(e) {
   var url = "https://databounty.sampidia.com/api/webhooks/google-form";
   var email = "";
-  if (e && e.namedValues) {
+  if (e && e.response && typeof e.response.getRespondentEmail === "function") {
+    email = e.response.getRespondentEmail();
+  }
+  if (!email && e && e.namedValues) {
     for (var key in e.namedValues) {
       if (key.toLowerCase().indexOf("email") !== -1) {
-        email = e.namedValues[key][0];
+        var val = e.namedValues[key];
+        email = Array.isArray(val) ? val[0] : val;
         break;
       }
     }
   }
   if (!email && e && e.values) {
     for (var i = 0; i < e.values.length; i++) {
-      if (e.values[i] && e.values[i].indexOf("@") !== -1) {
+      if (e.values[i] && typeof e.values[i] === "string" && e.values[i].indexOf("@") !== -1) {
         email = e.values[i];
         break;
       }

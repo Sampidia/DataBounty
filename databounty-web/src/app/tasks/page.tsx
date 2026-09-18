@@ -165,6 +165,10 @@ export default function TasksPage() {
     setIsSubmitting(true);
 
     try {
+      const isOption1Task = selectedTask.category === 'google_form' && 
+        selectedTask.googleFormVerificationType !== 'option2_manual' && 
+        (selectedTask as any).verificationType !== 'OPTION2_MANUAL';
+
       const newSubmission: TaskSubmission = {
         id: `sub_${Date.now()}`,
         taskId: selectedTask.id,
@@ -175,7 +179,7 @@ export default function TasksPage() {
         userState: user.state,
         userGender: user.gender,
         rewardAmount: selectedTask.rewardPerUser,
-        status: selectedTask.category === 'google_form' && selectedTask.googleFormVerificationType === 'option1_webhook' ? 'pending_verification' : 'pending',
+        status: isOption1Task ? 'pending_verification' : 'pending',
         secretCode: secretCode || undefined,
         proofUrl: proofUrl || 'Submitted proof link',
         bugTitle: bugTitle || undefined,
@@ -191,9 +195,8 @@ export default function TasksPage() {
       );
       setTasks(updatedTasks);
 
-      const isOption1 = selectedTask.category === 'google_form' && selectedTask.googleFormVerificationType === 'option1_webhook';
       alert(
-        isOption1
+        isOption1Task
           ? `Submission received! Your form response is pending Option 1 Webhook verification. Wallet will be credited automatically upon confirmation.`
           : `Submission received! Your proof has been submitted to the creator for verification.`
       );
