@@ -44,15 +44,15 @@ export default function Navbar({
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[#025BE5]/25 bg-[#031F51]/90 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        
+
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <div className="relative h-14 px-[7px] py-[1px] bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
-            <Image 
-              src="/Databounty_logo.webp" 
-              alt="DataBounty Logo" 
-              width={400} 
-              height={200} 
+            <Image
+              src="/Databounty_logo.webp"
+              alt="DataBounty Logo"
+              width={800}
+              height={400}
               priority
               className="object-contain h-13 sm:h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
             />
@@ -99,11 +99,10 @@ export default function Navbar({
           {(activeRole === 'tester' || activeRole === 'guest') && (
             <Link
               href="/tasks"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                pathname === '/tasks'
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${pathname === '/tasks'
                   ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               Explore Bounties
             </Link>
@@ -113,11 +112,10 @@ export default function Navbar({
           {activeRole === 'creator' && (
             <Link
               href="/creator"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                pathname === '/creator'
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${pathname === '/creator'
                   ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               <BarChart3 className="w-4 h-4 text-[#029FFC]" />
               Creator Dashboard
@@ -128,11 +126,10 @@ export default function Navbar({
           {(activeRole === 'tester' || activeRole === 'creator') && (
             <Link
               href="/profile"
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                pathname === '/profile'
+              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${pathname === '/profile'
                   ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
                   : 'text-slate-300 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               My Profile & Wallet
             </Link>
@@ -143,21 +140,19 @@ export default function Navbar({
             <div className="flex items-center bg-[#011438] border border-[#025BE5]/30 rounded-xl p-1 text-xs">
               <button
                 onClick={() => handleRoleChange('tester')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  activeRole === 'tester'
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${activeRole === 'tester'
                     ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
                     : 'text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 Tester
               </button>
               <button
                 onClick={() => handleRoleChange('creator')}
-                className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                  activeRole === 'creator'
+                className={`px-3 py-1 rounded-lg font-bold transition-all ${activeRole === 'creator'
                     ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
                     : 'text-slate-400 hover:text-white'
-                }`}
+                  }`}
               >
                 Creator
               </button>
@@ -230,17 +225,15 @@ export default function Navbar({
               <div className="flex items-center bg-[#031F51] border border-[#025BE5]/30 rounded-lg p-1 text-xs">
                 <button
                   onClick={() => handleRoleChange('tester')}
-                  className={`px-3 py-1 rounded font-bold transition-all ${
-                    activeRole === 'tester' ? 'bg-[#025BE5] text-white' : 'text-slate-400'
-                  }`}
+                  className={`px-3 py-1 rounded font-bold transition-all ${activeRole === 'tester' ? 'bg-[#025BE5] text-white' : 'text-slate-400'
+                    }`}
                 >
                   Tester
                 </button>
                 <button
                   onClick={() => handleRoleChange('creator')}
-                  className={`px-3 py-1 rounded font-bold transition-all ${
-                    activeRole === 'creator' ? 'bg-[#025BE5] text-white' : 'text-slate-400'
-                  }`}
+                  className={`px-3 py-1 rounded font-bold transition-all ${activeRole === 'creator' ? 'bg-[#025BE5] text-white' : 'text-slate-400'
+                    }`}
                 >
                   Creator
                 </button>
