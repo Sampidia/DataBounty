@@ -340,7 +340,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                     </label>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div
                       onClick={() => setGoogleFormVerificationType('option1_webhook')}
                       className={`p-3 rounded-lg border text-left text-xs transition-all cursor-pointer ${
