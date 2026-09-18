@@ -36,12 +36,10 @@ export default function AdminDashboardClient() {
       const unsubscribe = onSnapshot(
         q,
         (snap) => {
-          if (!snap.empty) {
-            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WithdrawalRequest));
-            // Sort by requestedAt descending
-            loaded.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-            setWithdrawals(loaded);
-          }
+          const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WithdrawalRequest));
+          // Sort by requestedAt descending
+          loaded.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+          setWithdrawals(loaded);
         },
         (err) => {
           console.warn('[AdminDashboard] Firestore withdrawals snapshot error:', err);

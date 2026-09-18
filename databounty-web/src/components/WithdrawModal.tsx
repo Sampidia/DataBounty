@@ -121,10 +121,17 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
       requestedAt: new Date().toISOString(),
     };
 
+    let firestoreError = '';
     try {
       await requestWithdrawalInFirestore(newWd);
-    } catch (err) {
-      console.warn('[WithdrawModal] Error saving withdrawal to Firestore:', err);
+    } catch (err: any) {
+      firestoreError = err?.message || 'Network error saving withdrawal request.';
+      console.error('[WithdrawModal] Firestore write FAILED:', err);
+    }
+
+    if (firestoreError) {
+      setErrorMsg(`⚠️ Withdrawal request could not be saved: ${firestoreError}`);
+      return;
     }
 
     onWithdrawSubmitted(newWd);

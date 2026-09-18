@@ -78,8 +78,9 @@ export async function createFirestoreTask(task: BountyTask): Promise<void> {
         escrowBalance: increment(task.totalBudget)
       });
     }
-  } catch (err) {
-    console.warn('[Firestore] createFirestoreTask error fallback:', err);
+  } catch (err: any) {
+    console.error('[Firestore] createFirestoreTask FAILED:', err);
+    throw new Error(err?.message || 'Failed to save task to database. Please try again.');
   }
 }
 
@@ -87,8 +88,9 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
   try {
     const subRef = doc(db, 'submissions', submission.id);
     await setDoc(subRef, submission);
-  } catch (err) {
-    console.warn('[Firestore] submitTaskProofToFirestore error fallback:', err);
+  } catch (err: any) {
+    console.error('[Firestore] submitTaskProofToFirestore FAILED:', err);
+    throw new Error(err?.message || 'Failed to submit proof. Please try again.');
   }
 }
 
@@ -105,8 +107,9 @@ export async function approveSubmissionInFirestore(submissionId: string, userId:
     await updateDoc(userRef, {
       walletBalance: increment(rewardAmount)
     });
-  } catch (err) {
-    console.warn('[Firestore] approveSubmissionInFirestore error fallback:', err);
+  } catch (err: any) {
+    console.error('[Firestore] approveSubmissionInFirestore FAILED:', err);
+    throw new Error(err?.message || 'Failed to approve submission. Please try again.');
   }
 }
 
@@ -120,8 +123,10 @@ export async function requestWithdrawalInFirestore(wd: WithdrawalRequest): Promi
     await updateDoc(userRef, {
       walletBalance: increment(-wd.amount)
     });
-  } catch (err) {
-    console.warn('[Firestore] requestWithdrawalInFirestore error fallback:', err);
+  } catch (err: any) {
+    console.error('[Firestore] requestWithdrawalInFirestore FAILED:', err);
+    throw new Error(err?.message || 'Failed to save withdrawal request. Please try again.');
   }
 }
+
 

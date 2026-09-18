@@ -12,12 +12,12 @@ export default function Footer() {
           {/* Col 1: Platform Info */}
           <div className="space-y-3">
             <div className="flex items-center gap-2">
-              <div className="relative px-3.5 py-0.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-md inline-flex items-center h-14">
+              <div className="relative px-[7px] py-[1px] bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-md inline-flex items-center h-14">
                 <Image 
                   src="/Databounty_logo.webp" 
                   alt="DataBounty Logo" 
-                  width={260} 
-                  height={80} 
+                  width={400} 
+                  height={200} 
                   className="object-contain h-13 sm:h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
                 />
               </div>
