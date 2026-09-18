@@ -51,8 +51,8 @@ export default function Navbar({
             <Image
               src="/Databounty_logo.webp"
               alt="DataBounty Logo"
-              width={800}
-              height={400}
+              width={1774}
+              height={887}
               priority
               className="object-contain h-13 sm:h-14 w-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] brightness-110"
             />
@@ -100,8 +100,8 @@ export default function Navbar({
             <Link
               href="/tasks"
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${pathname === '/tasks'
-                  ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
             >
               Explore Bounties
@@ -113,8 +113,8 @@ export default function Navbar({
             <Link
               href="/creator"
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1.5 ${pathname === '/creator'
-                  ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
             >
               <BarChart3 className="w-4 h-4 text-[#029FFC]" />
@@ -127,8 +127,8 @@ export default function Navbar({
             <Link
               href="/profile"
               className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${pathname === '/profile'
-                  ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
-                  : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
             >
               My Profile & Wallet
@@ -141,8 +141,8 @@ export default function Navbar({
               <button
                 onClick={() => handleRoleChange('tester')}
                 className={`px-3 py-1 rounded-lg font-bold transition-all ${activeRole === 'tester'
-                    ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 Tester
@@ -150,8 +150,8 @@ export default function Navbar({
               <button
                 onClick={() => handleRoleChange('creator')}
                 className={`px-3 py-1 rounded-lg font-bold transition-all ${activeRole === 'creator'
-                    ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
-                    : 'text-slate-400 hover:text-white'
+                  ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/20'
+                  : 'text-slate-400 hover:text-white'
                   }`}
               >
                 Creator
