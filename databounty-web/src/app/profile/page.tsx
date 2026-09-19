@@ -8,11 +8,14 @@ import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_TRANSACTIONS } from '@/lib/store';
 import { NIGERIAN_STATES, Transaction } from '@/lib/types';
 import { POPULAR_NIGERIAN_BANKS } from '@/lib/banks';
+import { db } from '@/lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { User, Wallet, ShieldCheck, CheckCircle2, Save, ArrowDownRight, ArrowUpRight, Smartphone, LogIn, Lock, CreditCard, RefreshCw } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS);
+  const [activeTab, setActiveTab] = useState<'all' | 'payouts' | 'withdrawals'>('all');
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -49,6 +52,69 @@ export default function ProfilePage() {
       }
     }
   }, [user]);
+
+  // Fetch real-time approved submissions (payouts) & withdrawals from Firestore
+  useEffect(() => {
+    if (user?.id) {
+      const subsRef = collection(db, 'submissions');
+      const qSubs = query(subsRef, where('userId', '==', user.id), where('status', '==', 'approved'));
+
+      const wdsRef = collection(db, 'withdrawals');
+      const qWds = query(wdsRef, where('userId', '==', user.id));
+
+      let loadedPayouts: Transaction[] = [];
+      let loadedWithdrawals: Transaction[] = [];
+
+      const unsubSubs = onSnapshot(qSubs, (snap) => {
+        loadedPayouts = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            userId: user.id,
+            userName: user.name,
+            type: 'task_reward',
+            amount: data.rewardAmount || 0,
+            description: `Task Bounty Reward: ${data.taskTitle || 'Bounty Campaign'}`,
+            timestamp: data.verifiedAt || data.submittedAt || new Date().toISOString(),
+          } as Transaction;
+        });
+        updateCombinedTransactions();
+      });
+
+      const unsubWds = onSnapshot(qWds, (snap) => {
+        loadedWithdrawals = snap.docs.map((d) => {
+          const data = d.data();
+          return {
+            id: d.id,
+            userId: user.id,
+            userName: user.name,
+            type: 'withdrawal',
+            amount: data.amount || 0,
+            description: `Bank Cashout to ${data.bankName || 'NUBAN'} (${data.accountNumber || ''})`,
+            timestamp: data.requestedAt || new Date().toISOString(),
+          } as Transaction;
+        });
+        updateCombinedTransactions();
+      });
+
+      function updateCombinedTransactions() {
+        const combined = [...loadedPayouts, ...loadedWithdrawals];
+        combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        setTransactions(combined);
+      }
+
+      return () => {
+        unsubSubs();
+        unsubWds();
+      };
+    }
+  }, [user?.id]);
+
+  const filteredTransactions = transactions.filter((tx) => {
+    if (activeTab === 'payouts') return tx.type === 'task_reward';
+    if (activeTab === 'withdrawals') return tx.type === 'withdrawal';
+    return true;
+  });
 
   const handleResolveBank = async () => {
     if (!bankName || accountNumber.length < 10) {
@@ -365,55 +431,100 @@ export default function ProfilePage() {
 
             {/* Transaction History Table */}
             <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
-              <h3 className="text-base font-bold text-white">Recent Wallet Activity & Payout History</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#025BE5]/20 pb-3">
+                <h3 className="text-base font-bold text-white">Recent Wallet Activity &amp; Payout History</h3>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30">
-                    <tr>
-                      <th className="p-3">Type</th>
-                      <th className="p-3">Description</th>
-                      <th className="p-3">Amount</th>
-                      <th className="p-3">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
-                    {transactions.map((tx) => (
-                      <tr key={tx.id} className="hover:bg-[#025BE5]/10">
-                        <td className="p-3">
-                          {tx.type === 'task_reward' && (
-                            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
-                              <ArrowDownRight className="w-3 h-3 text-emerald-400" /> Reward
-                            </span>
-                          )}
-                          {tx.type === 'withdrawal' && (
-                            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
-                              <ArrowUpRight className="w-3 h-3 text-amber-400" /> Cashout
-                            </span>
-                          )}
-                          {tx.type === 'creator_fee' && (
-                            <span className="px-2 py-0.5 rounded bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30 text-[10px] font-bold w-max block">
-                              Creator Fee
-                            </span>
-                          )}
-                          {tx.type === 'escrow_deposit' && (
-                            <span className="px-2 py-0.5 rounded bg-[#0379FA]/20 text-blue-300 border border-[#0379FA]/30 text-[10px] font-bold w-max block">
-                              Escrow Deposit
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-3">{tx.description}</td>
-                        <td className="p-3 font-bold text-white">
-                          ₦{tx.amount.toLocaleString()}
-                        </td>
-                        <td className="p-3 text-slate-400 text-[11px]">
-                          {new Date(tx.timestamp).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                {/* Activity Tabs */}
+                <div className="flex items-center gap-1.5 bg-[#011438] p-1 rounded-xl border border-[#025BE5]/30 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      activeTab === 'all'
+                        ? 'bg-[#025BE5] text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    All Activity ({transactions.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('payouts')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      activeTab === 'payouts'
+                        ? 'bg-emerald-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Task Payouts ({transactions.filter((t) => t.type === 'task_reward').length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('withdrawals')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      activeTab === 'withdrawals'
+                        ? 'bg-amber-600 text-white shadow-md'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Bank Withdrawals ({transactions.filter((t) => t.type === 'withdrawal').length})
+                  </button>
+                </div>
               </div>
+
+              {filteredTransactions.length === 0 ? (
+                <div className="p-8 text-center bg-[#011438] rounded-xl border border-[#025BE5]/20 text-slate-400 text-xs">
+                  No activity history recorded under {activeTab === 'all' ? 'this account' : activeTab}.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30">
+                      <tr>
+                        <th className="p-3">Type</th>
+                        <th className="p-3">Description</th>
+                        <th className="p-3">Amount</th>
+                        <th className="p-3">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
+                      {filteredTransactions.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-[#025BE5]/10">
+                          <td className="p-3">
+                            {tx.type === 'task_reward' && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                <ArrowDownRight className="w-3 h-3 text-emerald-400" /> Task Reward
+                              </span>
+                            )}
+                            {tx.type === 'withdrawal' && (
+                              <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                <ArrowUpRight className="w-3 h-3 text-amber-400" /> Bank Cashout
+                              </span>
+                            )}
+                            {tx.type === 'creator_fee' && (
+                              <span className="px-2 py-0.5 rounded bg-[#025BE5]/20 text-[#029FFC] border border-[#025BE5]/30 text-[10px] font-bold w-max block">
+                                Creator Fee
+                              </span>
+                            )}
+                            {tx.type === 'escrow_deposit' && (
+                              <span className="px-2 py-0.5 rounded bg-[#0379FA]/20 text-blue-300 border border-[#0379FA]/30 text-[10px] font-bold w-max block">
+                                Escrow Deposit
+                              </span>
+                            )}
+                          </td>
+                          <td className="p-3 font-medium text-slate-200">{tx.description}</td>
+                          <td className={`p-3 font-bold ${tx.type === 'task_reward' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {tx.type === 'task_reward' ? '+' : '-'}₦{tx.amount.toLocaleString()}
+                          </td>
+                          <td className="p-3 text-slate-400 text-[11px]">
+                            {new Date(tx.timestamp).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </>
         )}

@@ -37,6 +37,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   // Payment Option selection
   const [paymentOption, setPaymentOption] = useState<'wallet' | 'flutterwave' | 'split'>('flutterwave');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPublishSuccess, setIsPublishSuccess] = useState(false);
   const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const [formLinkError, setFormLinkError] = useState('');
   const [guideModal, setGuideModal] = useState<'option1' | 'option2' | null>(null);
@@ -59,6 +60,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       setTargetGender('All');
       setPaymentOption('flutterwave');
       setIsProcessing(false);
+      setIsPublishSuccess(false);
       setActiveStep(1);
       setFormLinkError('');
       setGuideModal(null);
@@ -86,11 +88,16 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     try {
       await createFirestoreTask(newTask, isPaidFromWallet);
       onTaskCreated(newTask);
-      onClose();
+      setIsPublishSuccess(true);
+      setTimeout(() => {
+        setIsPublishSuccess(false);
+        setIsProcessing(false);
+        onClose();
+      }, 2500);
     } catch (err: any) {
       alert(`Failed to publish task: ${err.message}`);
-    } finally {
       setIsProcessing(false);
+      setIsPublishSuccess(false);
     }
   };
 
@@ -176,6 +183,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
             logo: 'https://databounty.sampidia.com/flutterwave_icon.png',
           },
           callback: async (data: any) => {
+            setIsPublishSuccess(true);
             try {
               const verifyRes = await fetch('/api/payment/verify', {
                 method: 'POST',
@@ -194,6 +202,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                 await saveAndPublishTask(newTask);
               } else {
                 alert(`Escrow payment verification failed: ${verifyData.error || 'Unverified'}`);
+                setIsPublishSuccess(false);
                 setIsProcessing(false);
               }
             } catch (err: any) {
@@ -205,7 +214,9 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
             }
           },
           onclose: () => {
-            setIsProcessing(false);
+            if (!isPublishSuccess) {
+              setIsProcessing(false);
+            }
           },
         });
       } else {
@@ -238,15 +249,35 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
           </div>
           <button
             onClick={onClose}
-            disabled={isProcessing}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-[#025BE5]/20 transition-colors"
+            disabled={isProcessing || isPublishSuccess}
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-[#025BE5]/20 transition-colors disabled:opacity-30"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleCreate} className="p-6 space-y-6">
+        {isPublishSuccess ? (
+          <div className="p-8 text-center py-12 animate-in zoom-in-95 duration-200 space-y-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 mb-2 shadow-xl shadow-emerald-500/20 animate-bounce">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+            <h3 className="text-2xl font-black text-white tracking-tight flex items-center justify-center gap-2">
+              <Sparkles className="w-6 h-6 text-yellow-400 animate-pulse" />
+              Bounty Task Published!
+            </h3>
+            <p className="text-sm text-slate-300 max-w-md mx-auto leading-relaxed">
+              Escrow deposit of <span className="font-bold text-[#029FFC]">₦{totalDepositRequired.toLocaleString()}</span> secured. Your campaign <span className="font-bold text-white">&quot;{title}&quot;</span> is now live for <span className="font-bold text-white">{totalSpots} testers</span>!
+            </p>
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-4 py-2 rounded-full font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                Closing window and refreshing dashboard...
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Form Body */
+          <form onSubmit={handleCreate} className="p-6 space-y-6">
           
           {/* Step 1: Basic Campaign Info */}
           {activeStep === 1 && (
@@ -728,6 +759,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
           )}
 
         </form>
+        )}
       </div>
 
       {/* Interactive Google Form Setup Guide Modals */}
@@ -759,6 +791,9 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                 <ol className="list-decimal pl-4 space-y-2.5">
                   <li>
                     <strong>Open your Google Form</strong> in Google Drive.
+                  </li>
+                  <li>
+                    Click the <strong>Settings</strong> tab, then at <strong>Responses</strong> toggle to reveal all options, at <strong>Collect email addresses</strong> pick from the dropdown and select <strong>Responder Input</strong>.
                   </li>
                   <li>
                     Click the <strong>Responses</strong> tab, then click the green <strong>Link to Sheets</strong> icon to create/open the response spreadsheet.

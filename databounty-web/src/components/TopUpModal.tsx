@@ -57,6 +57,7 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
           logo: 'https://databounty.sampidia.com/flutterwave_icon.png',
         },
         callback: async (data: any) => {
+          setIsSuccess(true);
           try {
             const verifyRes = await fetch('/api/payment/verify', {
               method: 'POST',
@@ -75,9 +76,9 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
                 });
               }
               if (onSuccess) onSuccess(amount);
-              setIsSuccess(true);
             } else {
               alert(`Payment verification failed: ${verifyData.error || 'Unverified transaction'}`);
+              setIsSuccess(false);
             }
           } catch (err: any) {
             console.error('Verification error:', err);
@@ -88,9 +89,12 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
               });
             }
             if (onSuccess) onSuccess(amount);
-            setIsSuccess(true);
           } finally {
             setIsProcessing(false);
+            setTimeout(() => {
+              setIsSuccess(false);
+              onClose();
+            }, 2200);
           }
         },
         onclose: () => {
@@ -111,8 +115,8 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
         setTimeout(() => {
           setIsSuccess(false);
           onClose();
-        }, 1800);
-      }, 1200);
+        }, 2200);
+      }, 1000);
     }
   };
 
@@ -128,8 +132,8 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
         {/* Close Button */}
         <button
           onClick={onClose}
-          disabled={isProcessing}
-          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-[#025BE5]/20 rounded-full transition-colors"
+          disabled={isProcessing || isSuccess}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-[#025BE5]/20 rounded-full transition-colors disabled:opacity-30"
         >
           <X className="w-5 h-5" />
         </button>
