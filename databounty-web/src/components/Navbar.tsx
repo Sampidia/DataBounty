@@ -47,14 +47,14 @@ export default function Navbar({
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="relative h-14 px-[7px] py-[1px] bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
+          <div className="relative h-10 sm:h-14 px-[7px] py-[1px] bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/20 rounded-xl shadow-lg shadow-[#025BE5]/20 flex items-center justify-center transition-all group-hover:scale-105">
             <Image
               src="/Databounty_logo.webp"
               alt="DataBounty Logo"
               width={1774}
               height={887}
               priority
-              className="object-contain h-13 sm:h-14 w-auto"
+              className="object-contain h-10 sm:h-14 w-auto"
             />
           </div>
         </Link>
@@ -66,13 +66,6 @@ export default function Navbar({
               <span className="text-xs font-bold text-[#029FFC] bg-[#011438] px-2.5 py-1 rounded-lg border border-[#025BE5]/30">
                 ₦{balance.toLocaleString()}
               </span>
-              <button
-                onClick={logout}
-                title="Sign Out"
-                className="p-1.5 text-slate-300 hover:text-red-400 bg-white/5 hover:bg-red-500/20 rounded-lg border border-white/10"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
             </div>
           ) : (
             <button

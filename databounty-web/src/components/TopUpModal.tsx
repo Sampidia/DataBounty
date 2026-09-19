@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
+import { auth } from '@/lib/firebase';
 import { X, Wallet, ShieldCheck, CreditCard, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 
 interface TopUpModalProps {
@@ -71,6 +72,12 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
 
             if (verifyData.success) {
               if (user) {
+                const idToken = await auth.currentUser?.getIdToken();
+                await fetch('/api/wallet/credit', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ userId: user.id, amount, operation: 'credit', reason: 'topup', idToken }),
+                });
                 await updateUser({
                   walletBalance: (user.walletBalance || 0) + amount,
                 });
@@ -82,8 +89,14 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
             }
           } catch (err: any) {
             console.error('Verification error:', err);
-            // Fallback crediting
+            // Fallback crediting via server API
             if (user) {
+              const idToken = await auth.currentUser?.getIdToken();
+              await fetch('/api/wallet/credit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id, amount, operation: 'credit', reason: 'topup', idToken }),
+              });
               await updateUser({
                 walletBalance: (user.walletBalance || 0) + amount,
               });
@@ -103,10 +116,16 @@ export function TopUpModal({ isOpen, onClose, onSuccess }: TopUpModalProps) {
       });
     } else {
       // Fallback for offline/local dev when script isn't loaded
-      setTimeout(() => {
+      setTimeout(async () => {
         setIsProcessing(false);
         setIsSuccess(true);
         if (user) {
+          const idToken = await auth.currentUser?.getIdToken();
+          await fetch('/api/wallet/credit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id, amount, operation: 'credit', reason: 'topup', idToken }),
+          });
           updateUser({
             walletBalance: (user.walletBalance || 0) + amount,
           });

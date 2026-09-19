@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserProfile, WithdrawalRequest, calculateWithdrawalFee } from '@/lib/types';
-import { DEFAULT_BANK, POPULAR_NIGERIAN_BANKS, BankInfo, searchBanks } from '@/lib/banks';
+import { DEFAULT_BANK, POPULAR_NIGERIAN_BANKS, BankInfo, searchBanks, findBankByTag } from '@/lib/banks';
 import {
   X, Wallet, ShieldAlert, CheckCircle2, ArrowRight, Building2, Search,
   TrendingUp, AlertTriangle,
@@ -21,16 +21,31 @@ interface WithdrawModalProps {
 export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitted }: WithdrawModalProps) {
   const router = useRouter();
   const [amount, setAmount] = useState<number>(2000);
-  const [selectedBank, setSelectedBank] = useState<BankInfo>(DEFAULT_BANK);
+  const [selectedBank, setSelectedBank] = useState<BankInfo>(
+    user.bankName ? findBankByTag(user.bankName) : DEFAULT_BANK
+  );
   const [bankSearchQuery, setBankSearchQuery] = useState<string>('');
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState<boolean>(false);
-  const [accountNumber, setAccountNumber] = useState<string>(user.accountNumber || '');
+  const [accountNumber, setAccountNumber] = useState<string>(
+    user.accountNumber || '0000000000'
+  );
   const [accountName, setAccountName] = useState<string>(user.accountName || '');
   const [isVerifyingBank, setIsVerifyingBank] = useState<boolean>(false);
-  const [bankVerified, setBankVerified] = useState<boolean>(false);
+  const [bankVerified, setBankVerified] = useState<boolean>(
+    !!user.accountName && user.accountName !== 'GUEST'
+  );
   const [invalidDetailsError, setInvalidDetailsError] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [showInsufficientFundsPopup, setShowInsufficientFundsPopup] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedBank(user.bankName ? findBankByTag(user.bankName) : DEFAULT_BANK);
+      setAccountNumber(user.accountNumber || '0000000000');
+      setAccountName(user.accountName || '');
+      setBankVerified(!!user.accountName && user.accountName !== 'GUEST');
+    }
+  }, [isOpen, user]);
 
   if (!isOpen) return null;
 

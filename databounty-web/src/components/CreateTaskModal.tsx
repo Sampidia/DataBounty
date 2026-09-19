@@ -42,6 +42,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   const [formLinkError, setFormLinkError] = useState('');
   const [guideModal, setGuideModal] = useState<'option1' | 'option2' | null>(null);
   const [copiedScript, setCopiedScript] = useState(false);
+  const [currentTaskId, setCurrentTaskId] = useState<string>(`task_${Date.now()}`);
+  const [currentWebhookSecret, setCurrentWebhookSecret] = useState<string>(`whsec_${Math.random().toString(36).substring(2, 10)}`);
 
   // Reset form fields on open to ensure a fresh form every time
   React.useEffect(() => {
@@ -64,6 +66,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       setActiveStep(1);
       setFormLinkError('');
       setGuideModal(null);
+      setCurrentTaskId(`task_${Date.now()}`);
+      setCurrentWebhookSecret(`whsec_${Math.random().toString(36).substring(2, 10)}`);
     }
   }, [isOpen]);
 
@@ -122,7 +126,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     setIsProcessing(true);
 
     const newTask: BountyTask = {
-      id: `task_${Date.now()}`,
+      id: currentTaskId,
       creatorId: user?.id || 'usr_creator_202',
       creatorName: user?.name || 'TechCraft Studios',
       title,
@@ -144,7 +148,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     if (category === 'google_form') {
       if (formLink) newTask.formLink = formLink;
       if (googleFormVerificationType) newTask.googleFormVerificationType = googleFormVerificationType;
-      newTask.webhookSecret = `whsec_${Math.random().toString(36).substring(2, 10)}`;
+      newTask.webhookSecret = currentWebhookSecret;
     } else if (category === 'app_test') {
       if (appDownloadUrl) newTask.appDownloadUrl = appDownloadUrl;
     } else if (category === 'web_bug') {
@@ -404,7 +408,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                         }}
                         className="text-red-400 hover:text-red-300 text-[11px] font-bold underline mt-2 text-left block"
                       >
-                        How to setup Option 1 Google Form Auto-Payout Webhook
+                        How to setup Option 1 Google Form Auto-Verification
                       </button>
                     </div>
 
@@ -771,7 +775,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
               <h3 className="text-base font-bold text-[#029FFC] flex items-center gap-2">
                 <Code className="w-5 h-5 text-[#029FFC]" />
                 {guideModal === 'option1'
-                  ? 'Option 1: Google Form Auto-Payout Webhook Setup Guide'
+                  ? 'Option 1: Google Form Auto Verification Setup Guide'
                   : 'Option 2: Verification Code & Screenshot Setup Guide'}
               </h3>
               <button
@@ -831,6 +835,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     }
   }
   var payload = JSON.stringify({
+    taskId: "${currentTaskId}",
+    secret: "${currentWebhookSecret}",
     userEmail: email,
     responses: (e && e.values) ? e.values : [],
     namedValues: (e && e.namedValues) ? e.namedValues : {}
@@ -886,6 +892,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     }
   }
   var payload = JSON.stringify({
+    taskId: "${currentTaskId}",
+    secret: "${currentWebhookSecret}",
     userEmail: email,
     responses: (e && e.values) ? e.values : [],
     namedValues: (e && e.namedValues) ? e.namedValues : {}
@@ -907,11 +915,11 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                     Click <strong>+ Add Trigger</strong> (bottom right), select function: <code className="text-[#029FFC]">onFormSubmit</code>, Event source: <code className="text-[#029FFC]">From spreadsheet</code>, Event type: <code className="text-[#029FFC]">On form submit</code>.
                   </li>
                   <li>
-                    Click <strong>Save</strong> and authorize Google Apps Script permissions.
+                    Click <strong>Save</strong> and authorize Google Apps Script permissions [i.e to authorize, a pop up or new tab will open, then Click <strong>Advanced</strong>, and proceed to Click <strong>Go to Project (unsafe)</strong>, click on <strong>Select All</strong> and finally click on <strong>continue</strong>].
                   </li>
                 </ol>
                 <div className="p-3 bg-[#025BE5]/10 border border-[#025BE5]/30 rounded-xl text-[11px] text-slate-300">
-                  ⚡ Once configured, every form response will automatically trigger instant wallet payout to verified testers!
+                  ⚡ Once configured, every form response will automatically be verified
                 </div>
               </div>
             ) : (

@@ -56,6 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
       if (fbUser) {
         try {
+          const idTokenResult = await fbUser.getIdTokenResult();
+          if (idTokenResult.claims.admin) {
+            setIsAdminAuthenticated(true);
+          }
           const userDocRef = doc(db, 'users', fbUser.uid);
           const userSnap = await getDoc(userDocRef);
           if (userSnap.exists()) {
@@ -172,6 +176,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(newProfile);
       localStorage.setItem('databounty_auth_user', JSON.stringify(newProfile));
       setIsAuthModalOpen(false);
+
+      // Trigger welcome email notification (non-blocking)
+      fetch('/api/email/welcome', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          name: name || email.split('@')[0],
+          role: safeRole,
+        }),
+      }).catch((err) => console.warn('[Welcome Email Send Warning]', err));
     } catch (err: any) {
       // Local fallback creation with 0 balance
       const newProfile: UserProfile = {
@@ -208,10 +223,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('databounty_admin_session');
   };
 
-  const setAdminAuthenticated = (val: boolean) => {
+  const setAdminAuthenticated = async (val: boolean) => {
     setIsAdminAuthenticated(val);
     if (val) {
       localStorage.setItem('databounty_admin_session', 'true');
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.getIdToken(true);
+        } catch (err) {
+          console.warn('[AuthContext] Token refresh failed:', err);
+        }
+      }
     } else {
       localStorage.removeItem('databounty_admin_session');
     }

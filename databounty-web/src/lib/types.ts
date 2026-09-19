@@ -110,6 +110,7 @@ export interface Transaction {
   type: 'escrow_deposit' | 'task_reward' | 'withdrawal' | 'creator_fee' | 'withdrawal_fee';
   amount: number;
   description: string;
+  status?: string;
   timestamp: string;
 }
 

@@ -72,7 +72,7 @@ export default function Footer() {
               Automated Payout Engine
             </h4>
             <p className="text-slate-300 leading-relaxed">
-              Google Forms with Option 1 Google Sheet Webhook trigger instant automated wallet payouts.
+              Google Form tasks automated response verification and wallet payouts.
             </p>
             <div className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-slate-300 flex items-center justify-between">
               <span>Minimum Payout Threshold:</span>

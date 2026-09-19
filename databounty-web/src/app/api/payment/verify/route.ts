@@ -8,20 +8,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Transaction ID is required' }, { status: 400 });
     }
 
+    if (!expectedAmount || typeof expectedAmount !== 'number' || expectedAmount <= 0) {
+      return NextResponse.json({ error: 'expectedAmount is required for payment verification.' }, { status: 400 });
+    }
+
     const secretKey = process.env.FLUTTERWAVE_SECRET_KEY;
 
     if (!secretKey) {
-      // Development / Testing fallback mode when secret key is not set locally
-      console.warn('[Flutterwave Verification] FLUTTERWAVE_SECRET_KEY not set in environment. Dev mode auto-confirming transaction:', transactionId);
-      return NextResponse.json({
-        success: true,
-        verified: true,
-        amount: expectedAmount || 0,
-        currency: 'NGN',
-        status: 'successful',
-        transactionId,
-        isDevFallback: true,
-      });
+      console.error('[Flutterwave Verification] CRITICAL: FLUTTERWAVE_SECRET_KEY is not set in environment.');
+      return NextResponse.json({ error: 'Payment service misconfigured. Please contact support.' }, { status: 500 });
     }
 
     // Call Flutterwave REST API to verify transaction

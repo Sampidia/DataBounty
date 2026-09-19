@@ -503,10 +503,10 @@ export default function TasksPage() {
                   <div className="p-3.5 bg-[#025BE5]/20 border border-[#029FFC]/40 rounded-xl text-slate-200 text-xs space-y-1">
                     <div className="flex items-center gap-1.5 text-[#029FFC] font-bold">
                       <Sparkles className="w-4 h-4" />
-                      <span>Option 1 Automated Webhook Verification Active</span>
+                      <span>Automated Verification Active</span>
                     </div>
-                    <p className="text-[11px] text-slate-300">
-                      No screenshot upload required! Complete and submit your response in the Google Form linked above. Payout of <strong>₦{selectedTask.rewardPerUser.toLocaleString()}</strong> will be automatically credited to your wallet upon form submission.
+                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                      No screenshot upload required! Complete and submit your response in the Google Form linked above. The email provided when filling the form must be the same email you registered with at DataBounty. Payout of <strong>₦{selectedTask.rewardPerUser.toLocaleString()}</strong> will be automatically credited to your wallet upon form submission.
                     </p>
                   </div>
                 ) : (

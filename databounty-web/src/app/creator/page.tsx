@@ -214,7 +214,7 @@ export default function CreatorDashboard() {
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
                   <BarChart3 className="w-7 h-7 text-[#029FFC]" />
-                  Creator Analytics & Campaign Dashboard
+                  Creator Dashboard
                 </h1>
                 <p className="text-xs sm:text-sm text-slate-300 mt-1">
                   Monitor active task completion progress, submission funnels, and demographic targeting.

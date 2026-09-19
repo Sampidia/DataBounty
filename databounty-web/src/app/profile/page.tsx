@@ -91,6 +91,7 @@ export default function ProfilePage() {
             type: 'withdrawal',
             amount: data.amount || 0,
             description: `Bank Cashout to ${data.bankName || 'NUBAN'} (${data.accountNumber || ''})`,
+            status: data.status || 'PENDING',
             timestamp: data.requestedAt || new Date().toISOString(),
           } as Transaction;
         });
@@ -484,6 +485,7 @@ export default function ProfilePage() {
                         <th className="p-3">Type</th>
                         <th className="p-3">Description</th>
                         <th className="p-3">Amount</th>
+                        <th className="p-3">Status</th>
                         <th className="p-3">Date</th>
                       </tr>
                     </thead>
@@ -515,6 +517,31 @@ export default function ProfilePage() {
                           <td className="p-3 font-medium text-slate-200">{tx.description}</td>
                           <td className={`p-3 font-bold ${tx.type === 'task_reward' ? 'text-emerald-400' : 'text-amber-400'}`}>
                             {tx.type === 'task_reward' ? '+' : '-'}₦{tx.amount.toLocaleString()}
+                          </td>
+                          <td className="p-3">
+                            {tx.type === 'withdrawal' ? (
+                              tx.status === 'COMPLETED' ? (
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                  ✅ Paid
+                                </span>
+                              ) : tx.status === 'PROCESSING' ? (
+                                <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                  🔄 Processing
+                                </span>
+                              ) : tx.status === 'REJECTED' ? (
+                                <span className="px-2 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                  ❌ Rejected
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                  ⏱ Pending
+                                </span>
+                              )
+                            ) : (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold flex items-center gap-1 w-max">
+                                ✅ Paid
+                              </span>
+                            )}
                           </td>
                           <td className="p-3 text-slate-400 text-[11px]">
                             {new Date(tx.timestamp).toLocaleString()}

@@ -1,4 +1,4 @@
-import { db } from './firebase';
+import { db, auth } from './firebase';
 import { 
   collection, getDocs, doc, setDoc, updateDoc, increment, query, where, orderBy, getDoc 
 } from 'firebase/firestore';
@@ -138,6 +138,24 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
         };
         if (newCompleted >= (tData.totalSpots || 1)) {
           updates.status = 'completed';
+          if (tData.creatorId) {
+            getDoc(doc(db, 'users', tData.creatorId)).then((creatorSnap) => {
+              const creatorEmail = creatorSnap.exists() ? creatorSnap.data().email : null;
+              if (creatorEmail) {
+                fetch('/api/email/task-complete', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    taskId: submission.taskId,
+                    taskTitle: tData.title || submission.taskTitle,
+                    creatorId: tData.creatorId,
+                    creatorEmail,
+                    totalSpots: tData.totalSpots || newCompleted,
+                  }),
+                }).catch((eErr) => console.warn('[Task Complete Email Send Error]', eErr));
+              }
+            }).catch((cErr) => console.warn('[Creator Lookup Error]', cErr));
+          }
         }
         await updateDoc(taskRef, updates);
       }
@@ -172,32 +190,15 @@ export async function releaseTaskSpotInFirestore(taskId: string): Promise<void> 
 
 export async function approveSubmissionInFirestore(submissionId: string, userId: string, rewardAmount: number, taskId?: string): Promise<void> {
   try {
-    const subRef = doc(db, 'submissions', submissionId);
-    await updateDoc(subRef, {
-      status: 'approved',
-      verifiedAt: new Date().toISOString()
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/submissions/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ submissionId, userId, rewardAmount, idToken }),
     });
-
-    // Increment tester wallet balance atomically
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, {
-      walletBalance: increment(rewardAmount)
-    });
-
-    if (taskId) {
-      const taskRef = doc(db, 'tasks', taskId);
-      const taskSnap = await getDoc(taskRef);
-      if (taskSnap.exists()) {
-        const tData = taskSnap.data();
-        const newCompleted = (tData.completedSpots || 0) + 1;
-        const updates: Record<string, any> = {
-          completedSpots: increment(1)
-        };
-        if (newCompleted >= (tData.totalSpots || 1)) {
-          updates.status = 'completed';
-        }
-        await updateDoc(taskRef, updates);
-      }
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Server approval failed');
     }
   } catch (err: any) {
     console.error('[Firestore] approveSubmissionInFirestore FAILED:', err);
@@ -207,15 +208,16 @@ export async function approveSubmissionInFirestore(submissionId: string, userId:
 
 export async function requestWithdrawalInFirestore(wd: WithdrawalRequest): Promise<void> {
   try {
-    const cleanWd = sanitizeForFirestore(wd);
-    const wdRef = doc(db, 'withdrawals', wd.id);
-    await setDoc(wdRef, cleanWd);
-
-    // Deduct gross amount from tester wallet
-    const userRef = doc(db, 'users', wd.userId);
-    await updateDoc(userRef, {
-      walletBalance: increment(-wd.amount)
+    const idToken = await auth.currentUser?.getIdToken();
+    const res = await fetch('/api/withdrawals/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ withdrawal: wd, idToken }),
     });
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Server withdrawal processing failed');
+    }
   } catch (err: any) {
     console.error('[Firestore] requestWithdrawalInFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to save withdrawal request. Please try again.');

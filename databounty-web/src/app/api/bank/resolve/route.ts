@@ -1,7 +1,14 @@
 import { NextResponse } from 'next/server';
 import { findBankByTag } from '@/lib/banks';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  const rateLimit = checkRateLimit(`bank_resolve:${ip}`, { limit: 10, windowMs: 60000 });
+  if (rateLimit.limited) {
+    return NextResponse.json({ success: false, error: 'Too many requests. Please wait a minute.' }, { status: 429 });
+  }
+
   try {
     const { accountNumber, bankCode, bankName } = await request.json();
 
