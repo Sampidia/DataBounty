@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const csvContent = [csvHeader, ...csvRows].join('\n');
     const base64Csv = Buffer.from(csvContent).toString('base64');
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'support@databounty.sampidia.com';
+    const alertEmail = process.env.ADMIN_ALERT_EMAIL || process.env.ADMIN_EMAIL || 'alerts@databounty.sampidia.com';
     const resendApiKey = process.env.RESEND_API_KEY;
 
     let emailSent = false;
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
           },
           body: JSON.stringify({
             from: process.env.RESEND_FROM_EMAIL || 'DataBounty <onboarding@resend.dev>',
-            to: [adminEmail],
+            to: [alertEmail],
             subject: `📊 Disbursement CSV Export (${pendingWithdrawals.length} Pending Withdrawals)`,
             html: `
               <div style="font-family: sans-serif; background-color: #011438; color: #ffffff; padding: 24px; border-radius: 12px;">
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
         if (resendRes.ok) {
           emailSent = true;
-          emailMessage = `CSV generated and emailed as attachment to ${adminEmail}`;
+          emailMessage = `CSV generated and emailed as attachment to ${alertEmail}`;
         }
       } catch (e) {
         console.error('[Resend CSV Email Error]', e);

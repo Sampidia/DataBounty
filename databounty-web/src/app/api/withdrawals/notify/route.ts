@@ -77,7 +77,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Withdrawal alert successfully routed to ${adminEmail}`,
+      message: `Withdrawal alert successfully routed to ${alertEmail}`,
       data,
       status: 'PENDING'
     });
