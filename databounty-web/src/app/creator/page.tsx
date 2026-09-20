@@ -29,6 +29,20 @@ export default function CreatorDashboard() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
   const [previewProofUrl, setPreviewProofUrl] = useState<string | null>(null);
+  const [manualReviewFilter, setManualReviewFilter] = useState<'all' | 'google_form' | 'app_test' | 'web_bug'>('all');
+  const [reviewPage, setReviewPage] = useState<number>(1);
+  const REVIEWS_PER_PAGE = 15;
+
+  // Helper to get category for a submission's parent task
+  const getSubmissionCategory = (sub: TaskSubmission): string => {
+    const parentTask = tasks.find((t) => t.id === sub.taskId);
+    return parentTask?.category || 'google_form';
+  };
+
+  const handleFilterChange = (filter: 'all' | 'google_form' | 'app_test' | 'web_bug') => {
+    setManualReviewFilter(filter);
+    setReviewPage(1);
+  };
 
   // Fetch creator's tasks from Firestore with real-time listener
   useEffect(() => {
@@ -342,126 +356,193 @@ export default function CreatorDashboard() {
 
             </div>
 
-            {/* Option 2 Manual Verification Review & Approval Suite */}
-            <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold uppercase border border-amber-500/30">
-                      Option 2 Manual Reviews
-                    </span>
-                  </div>
-                  <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    <Key className="w-5 h-5 text-[#029FFC]" />
-                    Option 2 Verification Code & Screenshot Approval Queue
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Verify secret codes submitted by testers against your Google Form confirmation message, then approve instant wallet payouts.
-                  </p>
-                </div>
-              </div>
+            {/* Manual Verification Review & Approval Suite */}
+            {(() => {
+              const allManualSubmissions = submissions.filter((s) => s.secretCode || s.status === 'pending');
+              const filteredManualSubmissions = allManualSubmissions.filter((sub) => {
+                if (manualReviewFilter === 'all') return true;
+                return getSubmissionCategory(sub) === manualReviewFilter;
+              });
+              const totalPages = Math.ceil(filteredManualSubmissions.length / REVIEWS_PER_PAGE) || 1;
+              const paginatedSubmissions = filteredManualSubmissions.slice(
+                (reviewPage - 1) * REVIEWS_PER_PAGE,
+                reviewPage * REVIEWS_PER_PAGE
+              );
 
-              {submissions.filter((s) => s.secretCode || s.status === 'pending').length === 0 ? (
-                <div className="p-8 text-center bg-[#011438] rounded-xl border border-[#025BE5]/20 text-slate-400 text-xs">
-                  No Option 2 submissions currently pending manual review.
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30">
-                      <tr>
-                        <th className="p-3">Tester</th>
-                        <th className="p-3">Bounty Task</th>
-                        <th className="p-3">Tester Secret Code</th>
-                        <th className="p-3">Proof Screenshot</th>
-                        <th className="p-3">Reward</th>
-                        <th className="p-3">Status</th>
-                        <th className="p-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
-                      {submissions.filter((s) => s.secretCode || s.status === 'pending').map((sub) => (
-                        <tr key={sub.id} className="hover:bg-[#025BE5]/10">
-                          <td className="p-3 font-semibold text-white">
-                            <div>{sub.userName}</div>
-                            <div className="text-[10px] text-slate-400">{sub.userState} • {sub.userGender}</div>
-                          </td>
-                          <td className="p-3 font-medium text-slate-200 max-w-xs truncate">
-                            {sub.taskTitle}
-                          </td>
-                          <td className="p-3">
-                            {sub.secretCode ? (
-                              <span className="px-2.5 py-1 rounded bg-[#029FFC]/20 text-[#029FFC] font-mono font-bold border border-[#029FFC]/40 text-xs">
-                                {sub.secretCode}
-                              </span>
-                            ) : (
-                              <span className="text-slate-500 italic">No code submitted</span>
-                            )}
-                          </td>
-                          <td className="p-3">
-                            {sub.proofUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => setPreviewProofUrl(sub.proofUrl || null)}
-                                className="text-[#029FFC] font-semibold hover:underline flex items-center gap-1 text-[11px]"
-                              >
-                                <span>View Proof</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : (
-                              <span className="text-slate-500">N/A</span>
-                            )}
-                          </td>
-                          <td className="p-3 font-bold text-emerald-400">
-                            ₦{sub.rewardAmount.toLocaleString()}
-                          </td>
-                          <td className="p-3">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                                sub.status === 'approved'
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                  : sub.status === 'rejected'
-                                  ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              }`}
+              return (
+                <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                      <Key className="w-5 h-5 text-[#029FFC]" />
+                      Manual Reviews
+                    </h3>
+
+                    {/* Filter Tab Bar */}
+                    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#011438] rounded-xl border border-[#025BE5]/30">
+                      {[
+                        { id: 'all', label: 'All' },
+                        { id: 'google_form', label: 'Google Form' },
+                        { id: 'app_test', label: 'Mobile App' },
+                        { id: 'web_bug', label: 'Web Bug' },
+                      ].map((tab) => {
+                        const isActive = manualReviewFilter === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => handleFilterChange(tab.id as any)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                              isActive
+                                ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/30'
+                                : 'text-slate-400 hover:text-white hover:bg-[#025BE5]/10'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {filteredManualSubmissions.length === 0 ? (
+                    <div className="p-8 text-center bg-[#011438] rounded-xl border border-[#025BE5]/20 text-slate-400 text-xs">
+                      No submissions currently pending manual review for this category.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="overflow-x-auto max-h-[550px] overflow-y-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30 sticky top-0 z-10">
+                            <tr>
+                              <th className="p-3">Tester</th>
+                              <th className="p-3">Bounty Task</th>
+                              <th className="p-3">Tester Secret Code</th>
+                              <th className="p-3">Proof Screenshot</th>
+                              <th className="p-3">Reward</th>
+                              <th className="p-3">Status</th>
+                              <th className="p-3">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
+                            {paginatedSubmissions.map((sub) => (
+                              <tr key={sub.id} className="hover:bg-[#025BE5]/10">
+                                <td className="p-3 font-semibold text-white">
+                                  <div>{sub.userName}</div>
+                                  <div className="text-[10px] text-slate-400">{sub.userState} • {sub.userGender}</div>
+                                </td>
+                                <td className="p-3 font-medium text-slate-200 max-w-xs truncate">
+                                  {sub.taskTitle}
+                                </td>
+                                <td className="p-3">
+                                  {sub.secretCode ? (
+                                    <span className="px-2.5 py-1 rounded bg-[#029FFC]/20 text-[#029FFC] font-mono font-bold border border-[#029FFC]/40 text-xs">
+                                      {sub.secretCode}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500 italic">No code submitted</span>
+                                  )}
+                                </td>
+                                <td className="p-3">
+                                  {sub.proofUrl ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setPreviewProofUrl(sub.proofUrl || null)}
+                                      className="text-[#029FFC] font-semibold hover:underline flex items-center gap-1 text-[11px]"
+                                    >
+                                      <span>View Proof</span>
+                                      <ExternalLink className="w-3 h-3" />
+                                    </button>
+                                  ) : (
+                                    <span className="text-slate-500">N/A</span>
+                                  )}
+                                </td>
+                                <td className="p-3 font-bold text-emerald-400">
+                                  ₦{sub.rewardAmount.toLocaleString()}
+                                </td>
+                                <td className="p-3">
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                      sub.status === 'approved'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                        : sub.status === 'rejected'
+                                        ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                    }`}
+                                  >
+                                    {sub.status.replace('_', ' ')}
+                                  </span>
+                                </td>
+                                <td className="p-3">
+                                  {sub.status === 'pending' || sub.status === 'pending_verification' ? (
+                                    <div className="flex items-center gap-2">
+                                      <button
+                                        onClick={() => handleApprove(sub)}
+                                        disabled={processingSubId === sub.id}
+                                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all shadow-sm disabled:opacity-50"
+                                      >
+                                        <Check className="w-3.5 h-3.5" />
+                                        <span>Approve</span>
+                                      </button>
+                                      <button
+                                        onClick={() => {
+                                          setRejectionModalSub(sub);
+                                          setRejectionReason('');
+                                        }}
+                                        disabled={processingSubId === sub.id}
+                                        className="px-2.5 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all disabled:opacity-50"
+                                      >
+                                        <X className="w-3.5 h-3.5" />
+                                        <span>Reject</span>
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-[11px] text-slate-500 font-semibold">Processed</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Pagination Controls */}
+                      {filteredManualSubmissions.length > REVIEWS_PER_PAGE && (
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-3 border-t border-[#025BE5]/20 text-xs text-slate-400">
+                          <div>
+                            Showing <span className="text-white font-semibold">{(reviewPage - 1) * REVIEWS_PER_PAGE + 1}</span> to{' '}
+                            <span className="text-white font-semibold">
+                              {Math.min(reviewPage * REVIEWS_PER_PAGE, filteredManualSubmissions.length)}
+                            </span>{' '}
+                            of <span className="text-white font-semibold">{filteredManualSubmissions.length}</span> submissions
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={reviewPage === 1}
+                              onClick={() => setReviewPage((prev) => Math.max(prev - 1, 1))}
+                              className="px-3 py-1 bg-[#011438] hover:bg-[#025BE5]/20 border border-[#025BE5]/30 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                             >
-                              {sub.status.replace('_', ' ')}
+                              Previous
+                            </button>
+                            <span className="text-slate-300 font-semibold px-2">
+                              Page {reviewPage} of {totalPages}
                             </span>
-                          </td>
-                          <td className="p-3">
-                            {sub.status === 'pending' || sub.status === 'pending_verification' ? (
-                              <div className="flex items-center gap-2">
-                                <button
-                                  onClick={() => handleApprove(sub)}
-                                  disabled={processingSubId === sub.id}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all shadow-sm disabled:opacity-50"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Approve</span>
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setRejectionModalSub(sub);
-                                    setRejectionReason('');
-                                  }}
-                                  disabled={processingSubId === sub.id}
-                                  className="px-2.5 py-1.5 bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 font-bold rounded-lg text-[11px] flex items-center gap-1 transition-all disabled:opacity-50"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>Reject</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-slate-500 font-semibold">Processed</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                            <button
+                              type="button"
+                              disabled={reviewPage >= totalPages}
+                              onClick={() => setReviewPage((prev) => Math.min(prev + 1, totalPages))}
+                              className="px-3 py-1 bg-[#011438] hover:bg-[#025BE5]/20 border border-[#025BE5]/30 text-white rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                              Next
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* Creator Task Breakdown Table */}
             <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
