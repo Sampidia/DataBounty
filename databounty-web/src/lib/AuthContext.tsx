@@ -10,7 +10,7 @@ import {
   onAuthStateChanged,
   User as FirebaseUser
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -53,7 +53,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAdminAuthenticated(true);
     }
 
+    let unsubUserDoc: (() => void) | null = null;
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      if (unsubUserDoc) {
+        unsubUserDoc();
+        unsubUserDoc = null;
+      }
       if (fbUser) {
         try {
           const idTokenResult = await fbUser.getIdTokenResult();
@@ -61,20 +67,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAdminAuthenticated(true);
           }
           const userDocRef = doc(db, 'users', fbUser.uid);
-          const userSnap = await getDoc(userDocRef);
-          if (userSnap.exists()) {
-            const profileData = userSnap.data() as UserProfile;
-            setUser(profileData);
-            localStorage.setItem('databounty_auth_user', JSON.stringify(profileData));
-          }
+          unsubUserDoc = onSnapshot(
+            userDocRef,
+            (userSnap) => {
+              if (userSnap.exists()) {
+                const profileData = userSnap.data() as UserProfile;
+                setUser(profileData);
+                localStorage.setItem('databounty_auth_user', JSON.stringify(profileData));
+              }
+            },
+            (err) => {
+              console.warn('[AuthContext] Firestore user snapshot listener error:', err);
+            }
+          );
         } catch (err) {
           console.warn('[AuthContext] Firestore user fetch error:', err);
         }
+      } else {
+        setUser(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (unsubUserDoc) unsubUserDoc();
+    };
   }, []);
 
   const login = async (email: string, pass: string, targetRole: UserRole = 'tester') => {

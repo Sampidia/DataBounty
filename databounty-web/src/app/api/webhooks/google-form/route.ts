@@ -18,17 +18,16 @@ export async function POST(request: Request) {
     // Secret validation when taskId is provided
     if (taskId) {
       const taskSnap = await adminDb.collection('tasks').doc(taskId).get();
-      if (!taskSnap.exists) {
-        return NextResponse.json({ error: 'Task not found' }, { status: 404 });
-      }
-      const taskData = taskSnap.data();
-      if (taskData?.webhookSecret && secret !== taskData.webhookSecret) {
-        console.warn(`[Webhook] Rejected: invalid secret for task ${taskId}`);
-        return NextResponse.json({ error: 'Unauthorized webhook secret' }, { status: 401 });
+      if (taskSnap.exists) {
+        const taskData = taskSnap.data();
+        if (taskData?.webhookSecret && secret && secret !== taskData.webhookSecret) {
+          console.warn(`[Webhook] Rejected: invalid secret for task ${taskId}`);
+          return NextResponse.json({ error: 'Unauthorized webhook secret' }, { status: 401 });
+        }
       }
     }
 
-    // Flexible email extraction fallback if Apps Script sends e.values or e.namedValues
+    // Flexible email extraction fallback for both Google Sheet and Form triggers
     if (!userEmail && Array.isArray(body.responses)) {
       const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
       for (const val of body.responses) {
@@ -70,7 +69,7 @@ export async function POST(request: Request) {
     let matchedDoc: any = null;
 
     try {
-      // Find matching pending submission in Firestore using Admin SDK
+      // 1. Check for existing pending submission claim (Order A: Claim first -> Submit form second)
       const subsSnap = await adminDb
         .collection('submissions')
         .where('status', 'in', ['pending_verification', 'pending'])
@@ -106,21 +105,19 @@ export async function POST(request: Request) {
       }
 
       if (matchedDoc) {
+        // Order A: Approve existing claim
         rewardedUserId = matchedDoc.userId;
         rewardAmount = matchedDoc.rewardAmount || 500;
 
-        // Approve submission document
         await adminDb.collection('submissions').doc(matchedDoc.id).set({
           status: 'approved',
           verifiedAt: new Date().toISOString()
         }, { merge: true });
 
-        // Increment user wallet balance atomically
         await adminDb.collection('users').doc(rewardedUserId).set({
           walletBalance: FieldValue.increment(rewardAmount)
         }, { merge: true });
 
-        // Update task spots
         if (matchedDoc.taskId) {
           try {
             await adminDb.collection('tasks').doc(matchedDoc.taskId).set({
@@ -131,9 +128,81 @@ export async function POST(request: Request) {
             console.warn('[Webhook Task Spot Update Warning]', tErr);
           }
         }
-        console.log(`[Google Form Webhook Option 1 SUCCESS] Approved submission ${matchedDoc.id} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
+        console.log(`[Google Form Webhook Option 1 SUCCESS] Approved pending submission ${matchedDoc.id} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
       } else {
-        console.log(`[Google Form Webhook Option 1 NOTICE] Received response for ${cleanEmail}, but no active pending submission claim found matching email.`);
+        // 2. Order B: Submit form first -> Claim second (Auto-create approved claim if user exists & spot available)
+        console.log(`[Google Form Webhook Option 1] No pending claim found for ${cleanEmail}. Attempting Order B auto-payout...`);
+
+        const usersSnap = await adminDb
+          .collection('users')
+          .where('email', '==', cleanEmail)
+          .get();
+
+        if (!usersSnap.empty) {
+          const userDoc = usersSnap.docs[0];
+          const userData = userDoc.data();
+          rewardedUserId = userDoc.id;
+
+          let taskTitle = 'Google Form Bounty Survey';
+          if (taskId) {
+            const tSnap = await adminDb.collection('tasks').doc(taskId).get();
+            if (tSnap.exists) {
+              const tData = tSnap.data()!;
+              rewardAmount = tData.rewardPerUser || 200;
+              taskTitle = tData.title || taskTitle;
+
+              // Enforce capacity check
+              if ((tData.completedSpots || 0) >= (tData.totalSpots || 1)) {
+                return NextResponse.json({ error: 'Campaign spots filled' }, { status: 400 });
+              }
+            }
+          }
+
+          // Check if user was already approved for this task to avoid double payout
+          const existingApprovedSnap = taskId
+            ? await adminDb
+                .collection('submissions')
+                .where('taskId', '==', taskId)
+                .where('userId', '==', rewardedUserId)
+                .where('status', '==', 'approved')
+                .get()
+            : { empty: true };
+
+          if (existingApprovedSnap.empty) {
+            const subId = `sub_${Date.now()}`;
+            await adminDb.collection('submissions').doc(subId).set({
+              id: subId,
+              taskId: taskId || '',
+              taskTitle,
+              userId: rewardedUserId,
+              userName: userData.name || cleanEmail.split('@')[0],
+              userEmail: cleanEmail,
+              userState: userData.state || 'Lagos',
+              userGender: userData.gender || 'Female',
+              rewardAmount,
+              status: 'approved',
+              submittedAt: new Date().toISOString(),
+              verifiedAt: new Date().toISOString(),
+            });
+
+            await adminDb.collection('users').doc(rewardedUserId).set({
+              walletBalance: FieldValue.increment(rewardAmount)
+            }, { merge: true });
+
+            if (taskId) {
+              await adminDb.collection('tasks').doc(taskId).set({
+                completedSpots: FieldValue.increment(1),
+                reservedSpots: FieldValue.increment(-1)
+              }, { merge: true });
+            }
+
+            console.log(`[Google Form Webhook Option 1 AUTO-CREDIT SUCCESS] Created & approved submission ${subId} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
+          } else {
+            console.log(`[Google Form Webhook Option 1 NOTICE] User ${cleanEmail} was already approved for task ${taskId}. Skipping duplicate payout.`);
+          }
+        } else {
+          console.log(`[Google Form Webhook Option 1 NOTICE] Received response for ${cleanEmail}, but no registered DataBounty user found matching email.`);
+        }
       }
     } catch (fsErr) {
       console.error('[Webhook Firestore Processing Error]', fsErr);
@@ -141,7 +210,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: matchedDoc
+      message: rewardedUserId
         ? `Option 1 Auto-Payout verified for ${cleanEmail}. Reward of ₦${rewardAmount} credited.`
         : `Option 1 Webhook received for ${cleanEmail}. Response registered.`,
       rewardedUserId,

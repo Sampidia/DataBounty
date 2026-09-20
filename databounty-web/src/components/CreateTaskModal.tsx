@@ -817,6 +817,16 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   if (e && e.response && typeof e.response.getRespondentEmail === "function") {
     email = e.response.getRespondentEmail();
   }
+  if (!email && e && e.response && typeof e.response.getItemResponses === "function") {
+    var itemResponses = e.response.getItemResponses();
+    for (var j = 0; j < itemResponses.length; j++) {
+      var resp = itemResponses[j].getResponse();
+      if (typeof resp === "string" && resp.indexOf("@") !== -1) {
+        email = resp;
+        break;
+      }
+    }
+  }
   if (!email && e && e.namedValues) {
     for (var key in e.namedValues) {
       if (key.toLowerCase().indexOf("email") !== -1) {
@@ -873,6 +883,16 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   var email = "";
   if (e && e.response && typeof e.response.getRespondentEmail === "function") {
     email = e.response.getRespondentEmail();
+  }
+  if (!email && e && e.response && typeof e.response.getItemResponses === "function") {
+    var itemResponses = e.response.getItemResponses();
+    for (var j = 0; j < itemResponses.length; j++) {
+      var resp = itemResponses[j].getResponse();
+      if (typeof resp === "string" && resp.indexOf("@") !== -1) {
+        email = resp;
+        break;
+      }
+    }
   }
   if (!email && e && e.namedValues) {
     for (var key in e.namedValues) {

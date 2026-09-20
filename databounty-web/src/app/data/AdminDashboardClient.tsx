@@ -10,10 +10,8 @@ import { findBankByTag } from '@/lib/banks';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { Shield, Lock, Download, CheckCircle2, FileSpreadsheet, Mail, KeyRound, AlertCircle, Sparkles } from 'lucide-react';
-
-import { db } from '@/lib/firebase';
-import { collection, query, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { Shield, Lock, Download, CheckCircle2, FileSpreadsheet, Mail, KeyRound, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { auth } from '@/lib/firebase';
 
 export default function AdminDashboardClient() {
   const { isAdminAuthenticated, setAdminAuthenticated } = useAuth();
@@ -28,24 +26,30 @@ export default function AdminDashboardClient() {
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
 
-  // Real-time listener for withdrawal requests from Firestore
+  // Fetch withdrawal requests from Server API
+  const fetchWithdrawals = async () => {
+    setIsFetching(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/admin/withdrawals/list', {
+        headers: idToken ? { Authorization: `Bearer ${idToken}` } : {},
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.withdrawals)) {
+        setWithdrawals(data.withdrawals);
+      }
+    } catch (err) {
+      console.warn('[AdminDashboard] Fetch withdrawals error:', err);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
   useEffect(() => {
     if (isAdminAuthenticated) {
-      const q = query(collection(db, 'withdrawals'));
-      const unsubscribe = onSnapshot(
-        q,
-        (snap) => {
-          const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as WithdrawalRequest));
-          // Sort by requestedAt descending
-          loaded.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
-          setWithdrawals(loaded);
-        },
-        (err) => {
-          console.warn('[AdminDashboard] Firestore withdrawals snapshot error:', err);
-        }
-      );
-      return () => unsubscribe();
+      fetchWithdrawals();
     }
   }, [isAdminAuthenticated]);
 
@@ -62,16 +66,26 @@ export default function AdminDashboardClient() {
 
   // Single item status switcher
   const handleUpdateStatus = async (id: string, newStatus: WithdrawalStatus) => {
-    const updated = withdrawals.map((w) =>
-      w.id === id ? { ...w, status: newStatus, updatedAt: new Date().toISOString() } : w
-    );
-    setWithdrawals(updated);
-
     try {
-      const wdRef = doc(db, 'withdrawals', id);
-      await updateDoc(wdRef, { status: newStatus, updatedAt: new Date().toISOString() });
-    } catch (err) {
-      console.warn('[AdminDashboard] Firestore status update error:', err);
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/admin/withdrawals/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withdrawalId: id, status: newStatus, idToken }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update withdrawal status');
+      }
+
+      setWithdrawals((prev) =>
+        prev.map((w) =>
+          w.id === id ? { ...w, status: newStatus, updatedAt: new Date().toISOString() } : w
+        )
+      );
+    } catch (err: any) {
+      console.error('[AdminDashboard] Status update error:', err);
+      alert(`Failed to update status: ${err.message}`);
     }
   };
 
@@ -162,18 +176,32 @@ export default function AdminDashboardClient() {
       link.click();
       document.body.removeChild(link);
 
+      const pendingIds = pendingRequests.map((p) => p.id);
+      const idToken = await auth.currentUser?.getIdToken();
+
       await fetch('/api/withdrawals/export-csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pendingWithdrawals: pendingRequests }),
       });
 
-      const pendingIds = new Set(pendingRequests.map((p) => p.id));
-      const updatedList = withdrawals.map((w) =>
-        pendingIds.has(w.id) ? { ...w, status: 'PROCESSING' as WithdrawalStatus, updatedAt: new Date().toISOString() } : w
+      const statusRes = await fetch('/api/admin/withdrawals/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withdrawalIds: pendingIds, status: 'PROCESSING', idToken }),
+      });
+      const statusData = await statusRes.json();
+      if (!statusRes.ok || !statusData.success) {
+        console.warn('[AdminDashboard] CSV export status update warning:', statusData.error);
+      }
+
+      const pendingSet = new Set(pendingIds);
+      setWithdrawals((prev) =>
+        prev.map((w) =>
+          pendingSet.has(w.id) ? { ...w, status: 'PROCESSING' as WithdrawalStatus, updatedAt: new Date().toISOString() } : w
+        )
       );
 
-      setWithdrawals(updatedList);
       alert(`Success! Downloaded ${pendingRequests.length} pending request(s) as CSV.`);
     } catch (err: any) {
       alert(`Failed to complete CSV export: ${err.message}`);
@@ -182,7 +210,7 @@ export default function AdminDashboardClient() {
     }
   };
 
-  const handleMarkProcessingToPaid = () => {
+  const handleMarkProcessingToPaid = async () => {
     const processingRequests = withdrawals.filter((w) => w.status === 'PROCESSING');
 
     if (processingRequests.length === 0) {
@@ -190,12 +218,31 @@ export default function AdminDashboardClient() {
       return;
     }
 
-    const updatedList = withdrawals.map((w) =>
-      w.status === 'PROCESSING' ? { ...w, status: 'COMPLETED' as WithdrawalStatus, updatedAt: new Date().toISOString() } : w
-    );
+    try {
+      const processingIds = processingRequests.map((p) => p.id);
+      const idToken = await auth.currentUser?.getIdToken();
 
-    setWithdrawals(updatedList);
-    alert(`Marked ${processingRequests.length} PROCESSING request(s) as PAID / COMPLETED!`);
+      const res = await fetch('/api/admin/withdrawals/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ withdrawalIds: processingIds, status: 'COMPLETED', idToken }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update processing withdrawals to paid');
+      }
+
+      const processingSet = new Set(processingIds);
+      setWithdrawals((prev) =>
+        prev.map((w) =>
+          processingSet.has(w.id) ? { ...w, status: 'COMPLETED' as WithdrawalStatus, updatedAt: new Date().toISOString() } : w
+        )
+      );
+
+      alert(`Marked ${processingRequests.length} PROCESSING request(s) as PAID / COMPLETED!`);
+    } catch (err: any) {
+      alert(`Failed to mark requests as paid: ${err.message}`);
+    }
   };
 
   const chartData = [
@@ -321,6 +368,14 @@ export default function AdminDashboardClient() {
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  onClick={fetchWithdrawals}
+                  disabled={isFetching}
+                  className="px-3.5 py-2 bg-[#025BE5]/20 hover:bg-[#025BE5]/30 text-[#029FFC] font-bold rounded-xl text-xs border border-[#025BE5]/30 transition-all flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  <span>Refresh Queue</span>
+                </button>
                 <button
                   onClick={() => setAdminAuthenticated(false)}
                   className="px-3.5 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 font-bold rounded-xl text-xs border border-red-500/30 transition-all"
@@ -448,7 +503,7 @@ export default function AdminDashboardClient() {
                                   : w.status === 'REJECTED'
                                   ? 'bg-red-500/20 text-red-300 border border-red-500/30'
                                   : 'bg-[#029FFC]/20 text-[#029FFC] border border-[#029FFC]/30'
-                              }`}
+                                }`}
                             >
                               {w.status}
                             </span>

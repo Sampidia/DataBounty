@@ -118,6 +118,10 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
         (d) => d.data().status !== 'rejected'
       );
       if (activeExisting.length > 0) {
+        const existingApproved = activeExisting.find((d) => d.data().status === 'approved');
+        if (existingApproved) {
+          throw new Error('Your form response was already verified via Google Form and reward has been credited to your wallet!');
+        }
         throw new Error('You have already submitted proof for this task.');
       }
     }
