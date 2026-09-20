@@ -71,8 +71,7 @@ export function sanitizeForFirestore<T>(obj: T): T {
 export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
   try {
     const tasksRef = collection(db, 'tasks');
-    const q = query(tasksRef, where('status', '==', 'active'));
-    const snap = await getDocs(q);
+    const snap = await getDocs(tasksRef);
     if (!snap.empty) {
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
     }
@@ -120,7 +119,7 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
       if (activeExisting.length > 0) {
         const existingApproved = activeExisting.find((d) => d.data().status === 'approved');
         if (existingApproved) {
-          throw new Error('Your form response was already verified via Google Form and reward has been credited to your wallet!');
+          throw new Error('ALREADY_VERIFIED_WEBHOOK:Your form response was already verified via Google Form and reward has been credited to your wallet!');
         }
         throw new Error('You have already submitted proof for this task.');
       }

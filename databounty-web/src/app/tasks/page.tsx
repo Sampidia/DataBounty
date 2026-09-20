@@ -8,7 +8,7 @@ import WithdrawModal from '@/components/WithdrawModal';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_TASKS, fetchTasksFromFirestore, submitTaskProofToFirestore, uploadImageToImgBB, reserveTaskSpotInFirestore, releaseTaskSpotInFirestore } from '@/lib/store';
 import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
-import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle, Image as ImageIcon, Sparkles, CheckCircle2, Wallet } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
@@ -22,6 +22,7 @@ export default function TasksPage() {
   const [timerSeconds, setTimerSeconds] = useState<number>(1800);
   const [isTimerRunning, setIsTimerRunning] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stateFilter, setStateFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
@@ -31,6 +32,15 @@ export default function TasksPage() {
   const [bugDescription, setBugDescription] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isUploadingProof, setIsUploadingProof] = useState<boolean>(false);
+  const [verifiedRewardModal, setVerifiedRewardModal] = useState<{
+    isOpen: boolean;
+    rewardAmount: number;
+    taskTitle: string;
+  }>({
+    isOpen: false,
+    rewardAmount: 0,
+    taskTitle: '',
+  });
 
   const userState = user?.state || 'Lagos';
   const userGender = user?.gender || 'Female';
@@ -38,10 +48,9 @@ export default function TasksPage() {
   useEffect(() => {
     setIsLoading(true);
     const tasksRef = collection(db, 'tasks');
-    const q = query(tasksRef, where('status', '==', 'active'));
 
     const unsubscribe = onSnapshot(
-      q,
+      tasksRef,
       (snap) => {
         if (!snap.empty) {
           const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
@@ -91,6 +100,12 @@ export default function TasksPage() {
       if (!matchTitle && !matchDesc) return false;
     }
     if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
+
+    if (statusFilter !== 'all') {
+      const isCompleted = task.status === 'completed' || task.completedSpots >= task.totalSpots;
+      if (statusFilter === 'active' && isCompleted) return false;
+      if (statusFilter === 'completed' && !isCompleted) return false;
+    }
 
     const isStateMatch =
       stateFilter === 'all' ||
@@ -203,7 +218,18 @@ export default function TasksPage() {
 
       handleCloseTaskModal();
     } catch (err: any) {
-      alert(`Submission failed: ${err.message}`);
+      if (err?.message?.includes('ALREADY_VERIFIED_WEBHOOK') || err?.message?.includes('already verified via Google Form')) {
+        const reward = selectedTask?.rewardPerUser || 500;
+        const title = selectedTask?.title || 'Google Form Bounty Task';
+        handleCloseTaskModal();
+        setVerifiedRewardModal({
+          isOpen: true,
+          rewardAmount: reward,
+          taskTitle: title,
+        });
+      } else {
+        alert(`Submission failed: ${err.message}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -243,7 +269,7 @@ export default function TasksPage() {
 
         {/* Demographic & Category Filter Toolbar */}
         <div className="glass-panel p-4 rounded-2xl border border-[#025BE5]/25 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             
             {/* Search Input */}
             <div className="relative">
@@ -255,6 +281,19 @@ export default function TasksPage() {
                 placeholder="Search bounties..."
                 className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC]"
               />
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#029FFC] font-semibold"
+              >
+                <option value="all">All Bounties</option>
+                <option value="active">Active Bounties</option>
+                <option value="completed">Completed Bounties</option>
+              </select>
             </div>
 
             {/* Category Filter */}
@@ -587,6 +626,66 @@ export default function TasksPage() {
         </div>
         );
       })()}
+
+      {/* Verified Reward Success Modal (Order B Webhook Auto-Credit) */}
+      {verifiedRewardModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-[#031F51] border border-[#029FFC]/40 rounded-2xl shadow-2xl shadow-[#025BE5]/20 overflow-hidden text-white animate-in zoom-in-95 duration-200">
+            {/* Top accent gradient */}
+            <div className="h-1.5 w-full bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC]" />
+
+            <div className="p-6 text-center space-y-5">
+              {/* Animated Glowing Icon */}
+              <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full bg-[#025BE5]/20 border-2 border-[#029FFC] text-[#029FFC] mx-auto shadow-lg shadow-[#025BE5]/50">
+                <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+                <div className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center text-slate-950 font-black text-xs">
+                  ✓
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-extrabold uppercase tracking-wider">
+                  Verified &amp; Paid
+                </span>
+                <h3 className="text-xl font-black text-white tracking-tight">
+                  Reward Credited to Your Wallet!
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed px-2">
+                  Your response for <strong className="text-white">"{verifiedRewardModal.taskTitle}"</strong> has been successfully verified via Google Form.
+                </p>
+                <div className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl my-2 flex items-center justify-between">
+                  <span className="text-xs text-slate-400 font-semibold">Credited Amount:</span>
+                  <span className="text-lg font-black text-emerald-400">₦{verifiedRewardModal.rewardAmount.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerifiedRewardModal({ isOpen: false, rewardAmount: 0, taskTitle: '' });
+                    setIsWithdrawModalOpen(true);
+                  }}
+                  className="flex-1 py-3 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-[#025BE5]/40 flex items-center justify-center gap-2"
+                >
+                  <Wallet className="w-4 h-4" />
+                  <span>View Wallet</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVerifiedRewardModal({ isOpen: false, rewardAmount: 0, taskTitle: '' });
+                  }}
+                  className="flex-1 py-3 px-4 bg-[#011438] border border-[#025BE5]/40 hover:border-[#029FFC]/60 text-slate-300 hover:text-white font-bold rounded-xl text-xs transition-all"
+                >
+                  Continue Browsing
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {user && (
         <WithdrawModal

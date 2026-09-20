@@ -242,8 +242,8 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
                 <label className="text-xs font-semibold text-slate-200">Withdrawal Amount (₦ NGN)</label>
                 <span className="text-[11px] text-amber-400 font-medium">Min Threshold: ₦100</span>
               </div>
-              <div className="relative">
-                <span className="absolute left-3.5 top-2.5 text-slate-400 font-bold">₦</span>
+              <div className="relative flex items-center">
+                <span className="absolute left-3.5 text-slate-400 font-bold">₦</span>
                 <input
                   type="number"
                   min={100}
@@ -251,8 +251,15 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
                   step={50}
                   value={amount}
                   onChange={handleAmountChange}
-                  className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl pl-8 pr-4 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-[#029FFC]"
+                  className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl pl-8 pr-16 py-2.5 text-sm text-white font-bold focus:outline-none focus:border-[#029FFC]"
                 />
+                <button
+                  type="button"
+                  onClick={() => setAmount(Math.max(0, user.walletBalance))}
+                  className="absolute right-2 px-2.5 py-1 bg-[#025BE5]/30 hover:bg-[#025BE5]/50 text-[#029FFC] font-black text-[10px] uppercase rounded-lg border border-[#025BE5]/50 transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  MAX
+                </button>
               </div>
             </div>
 
