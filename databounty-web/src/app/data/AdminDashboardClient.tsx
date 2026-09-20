@@ -5,16 +5,17 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_WITHDRAWALS, INITIAL_TRANSACTIONS } from '@/lib/store';
-import { WithdrawalRequest, WithdrawalStatus, UserProfile } from '@/lib/types';
+import { BountyTask, WithdrawalRequest, WithdrawalStatus, UserProfile } from '@/lib/types';
 import { findBankByTag } from '@/lib/banks';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
+  BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend
 } from 'recharts';
 import {
   Shield, Lock, Download, CheckCircle2, FileSpreadsheet, Mail, KeyRound, AlertCircle,
-  Sparkles, RefreshCw, Users, UserX, UserCheck, Send, Search, ChevronDown, BarChart3,
+  Sparkles, RefreshCw, Users, UserX, UserCheck, Send, Search, ChevronDown, BarChart3, Printer,
 } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 type AdminTab = 'revenue' | 'users' | 'email';
 
@@ -22,7 +23,10 @@ export default function AdminDashboardClient() {
   const { isAdminAuthenticated, setAdminAuthenticated } = useAuth();
   const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>(INITIAL_WITHDRAWALS);
   const [transactions] = useState(INITIAL_TRANSACTIONS);
+  const [tasks, setTasks] = useState<BountyTask[]>([]);
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>('revenue');
+  const [revenueTimeframe, setRevenueTimeframe] = useState<'today' | 'week' | 'month' | 'all'>('week');
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // OTP Form State
   const [email, setEmail] = useState('');
@@ -90,6 +94,23 @@ export default function AdminDashboardClient() {
     if (isAdminAuthenticated) {
       fetchWithdrawals();
       fetchUsers();
+
+      // Real-time listener for all platform tasks to calculate live Creator Service Fees
+      const tasksRef = collection(db, 'tasks');
+      const unsub = onSnapshot(
+        tasksRef,
+        (snap) => {
+          if (!snap.empty) {
+            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
+            setTasks(loaded);
+          } else {
+            setTasks([]);
+          }
+        },
+        (err) => console.warn('[AdminDashboard] Fetch tasks error:', err)
+      );
+
+      return () => unsub();
     }
   }, [isAdminAuthenticated]);
 
@@ -166,10 +187,11 @@ export default function AdminDashboardClient() {
     }
   };
 
-  // Compute platform fee earnings
-  const creatorFeesTotal = transactions
-    .filter((t) => t.type === 'creator_fee')
-    .reduce((sum, t) => sum + t.amount, 0);
+  // Compute platform fee earnings from live Firestore tasks & withdrawals
+  const creatorFeesTotal = tasks.reduce(
+    (sum, t) => sum + (t.creatorFeePaid ?? Math.round((t.totalBudget || 0) * 0.1)),
+    0
+  );
 
   const withdrawalFeesTotal = withdrawals
     .filter((w) => w.status === 'COMPLETED')
@@ -358,11 +380,281 @@ export default function AdminDashboardClient() {
     }
   };
 
-  const chartData = [
-    { name: 'Creator Fees', amount: creatorFeesTotal, fill: '#025BE5' },
-    { name: 'Withdrawal Fees', amount: withdrawalFeesTotal, fill: '#0379FA' },
-    { name: 'Total Revenue', amount: totalPlatformEarnings, fill: '#029FFC' },
-  ];
+  // Time-bucketed revenue helper for interactive graph & export reports
+  const getRevenueData = () => {
+    const now = new Date();
+
+    if (revenueTimeframe === 'today') {
+      const hours = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'];
+      return hours.map((h, idx) => {
+        const hStart = idx * 4;
+        const hEnd = (idx + 1) * 4;
+
+        const cFees = tasks
+          .filter((t) => {
+            const d = new Date(t.createdAt);
+            const isToday = d.toDateString() === now.toDateString();
+            const hHour = d.getHours();
+            return isToday && hHour >= hStart && hHour < hEnd;
+          })
+          .reduce((sum, t) => sum + (t.creatorFeePaid ?? Math.round((t.totalBudget || 0) * 0.1)), 0);
+
+        const wFees = withdrawals
+          .filter((w) => {
+            if (w.status !== 'COMPLETED') return false;
+            const d = new Date(w.updatedAt || w.createdAt || Date.now());
+            const isToday = d.toDateString() === now.toDateString();
+            const hHour = d.getHours();
+            return isToday && hHour >= hStart && hHour < hEnd;
+          })
+          .reduce((sum, w) => sum + (w.fee || 50), 0);
+
+        return {
+          name: h,
+          creatorFees: cFees,
+          withdrawalFees: wFees,
+          totalRevenue: cFees + wFees,
+        };
+      });
+    }
+
+    if (revenueTimeframe === 'week') {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const result: { name: string; creatorFees: number; withdrawalFees: number; totalRevenue: number }[] = [];
+
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        const dayLabel = days[d.getDay()];
+
+        const cFees = tasks
+          .filter((t) => new Date(t.createdAt).toDateString() === d.toDateString())
+          .reduce((sum, t) => sum + (t.creatorFeePaid ?? Math.round((t.totalBudget || 0) * 0.1)), 0);
+
+        const wFees = withdrawals
+          .filter((w) => {
+            if (w.status !== 'COMPLETED') return false;
+            const wDate = new Date(w.updatedAt || w.createdAt || Date.now());
+            return wDate.toDateString() === d.toDateString();
+          })
+          .reduce((sum, w) => sum + (w.fee || 50), 0);
+
+        result.push({
+          name: dayLabel,
+          creatorFees: cFees,
+          withdrawalFees: wFees,
+          totalRevenue: cFees + wFees,
+        });
+      }
+      return result;
+    }
+
+    if (revenueTimeframe === 'month') {
+      const weeks = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+      return weeks.map((wName, idx) => {
+        const dayStart = idx * 7;
+        const dayEnd = (idx + 1) * 7;
+
+        const cFees = tasks
+          .filter((t) => {
+            const d = new Date(t.createdAt);
+            const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 3600 * 24));
+            return diffDays >= (28 - dayEnd) && diffDays < (28 - dayStart);
+          })
+          .reduce((sum, t) => sum + (t.creatorFeePaid ?? Math.round((t.totalBudget || 0) * 0.1)), 0);
+
+        const wFees = withdrawals
+          .filter((w) => {
+            if (w.status !== 'COMPLETED') return false;
+            const d = new Date(w.updatedAt || w.createdAt || Date.now());
+            const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 3600 * 24));
+            return diffDays >= (28 - dayEnd) && diffDays < (28 - dayStart);
+          })
+          .reduce((sum, w) => sum + (w.fee || 50), 0);
+
+        return {
+          name: wName,
+          creatorFees: cFees,
+          withdrawalFees: wFees,
+          totalRevenue: cFees + wFees,
+        };
+      });
+    }
+
+    // All Time (by Month)
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const currentMonth = now.getMonth();
+    const result = [];
+    for (let i = 5; i >= 0; i--) {
+      const mIdx = (currentMonth - i + 12) % 12;
+      const mName = months[mIdx];
+
+      const cFees = tasks
+        .filter((t) => new Date(t.createdAt).getMonth() === mIdx)
+        .reduce((sum, t) => sum + (t.creatorFeePaid ?? Math.round((t.totalBudget || 0) * 0.1)), 0);
+
+      const wFees = withdrawals
+        .filter((w) => {
+          if (w.status !== 'COMPLETED') return false;
+          const d = new Date(w.updatedAt || w.createdAt || Date.now());
+          return d.getMonth() === mIdx;
+        })
+        .reduce((sum, w) => sum + (w.fee || 50), 0);
+
+      result.push({
+        name: mName,
+        creatorFees: cFees,
+        withdrawalFees: wFees,
+        totalRevenue: cFees + wFees,
+      });
+    }
+    return result;
+  };
+
+  const chartData = getRevenueData();
+
+  // Export Handlers
+  const handleExportPDF = () => {
+    const printWin = window.open('', '_blank');
+    if (!printWin) {
+      alert('Please allow popups to export the PDF report.');
+      return;
+    }
+
+    const timeframeLabel =
+      revenueTimeframe === 'today'
+        ? 'Today (Hourly)'
+        : revenueTimeframe === 'week'
+        ? 'This Week (7 Days)'
+        : revenueTimeframe === 'month'
+        ? 'This Month (4 Weeks)'
+        : 'All Time History';
+
+    const dateStr = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const rowsHtml = chartData
+      .map(
+        (row) => `
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 10px; font-weight: 600;">${row.name}</td>
+          <td style="padding: 10px; color: #10b981; font-weight: 700;">₦${row.creatorFees.toLocaleString()}</td>
+          <td style="padding: 10px; color: #f59e0b; font-weight: 700;">₦${row.withdrawalFees.toLocaleString()}</td>
+          <td style="padding: 10px; color: #029ffc; font-weight: 800;">₦${row.totalRevenue.toLocaleString()}</td>
+        </tr>
+      `
+      )
+      .join('');
+
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>DataBounty Revenue Report - ${timeframeLabel}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; background: #ffffff; color: #0f172a; margin: 0; padding: 32px; }
+            .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid #025BE5; padding-bottom: 16px; margin-bottom: 24px; }
+            .logo { height: 48px; }
+            .title { font-size: 22px; font-weight: 900; color: #031F51; margin: 0; }
+            .subtitle { font-size: 13px; color: #64748b; margin: 4px 0 0; }
+            .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+            .card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
+            .card-label { font-size: 12px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+            .card-val { font-size: 22px; font-weight: 900; margin-top: 6px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 13px; }
+            th { background: #031F51; color: #ffffff; padding: 12px 10px; text-align: left; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+            .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 11px; color: #94a3b8; text-align: center; }
+            @media print {
+              body { padding: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <img src="https://databounty.sampidia.com/Databounty_logo-old2.webp" class="logo" alt="DataBounty Logo" />
+              <p class="subtitle">Official Executive Financial Statement</p>
+            </div>
+            <div style="text-align: right;">
+              <h1 class="title">REVENUE STATEMENT</h1>
+              <p class="subtitle">Timeframe: <strong>${timeframeLabel}</strong></p>
+              <p class="subtitle">Generated: ${dateStr}</p>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <div class="card">
+              <div class="card-label">Total Platform Earnings</div>
+              <div class="card-val" style="color: #025BE5;">₦${totalPlatformEarnings.toLocaleString()}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Creator Service Fees</div>
+              <div class="card-val" style="color: #10b981;">₦${creatorFeesTotal.toLocaleString()}</div>
+            </div>
+            <div class="card">
+              <div class="card-label">Withdrawal Cashout Fees</div>
+              <div class="card-val" style="color: #f59e0b;">₦${withdrawalFeesTotal.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <h3 style="font-size: 16px; color: #031F51; margin-bottom: 8px;">Breakdown by Time Period</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Period / Interval</th>
+                <th>Creator Fees</th>
+                <th>Withdrawal Fees</th>
+                <th>Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+
+          <div class="footer">
+            DataBounty Financial Audit & Analytics Suite &bull; databounty.sampidia.com &bull; Confidential
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+  };
+
+  const handleExportCSV = () => {
+    const timeframeLabel = revenueTimeframe.toUpperCase();
+    let csv = `DataBounty Financial Revenue Report\n`;
+    csv += `Generated At,${new Date().toISOString()}\n`;
+    csv += `Timeframe,${timeframeLabel}\n`;
+    csv += `Total Platform Earnings,₦${totalPlatformEarnings}\n`;
+    csv += `Creator Fees Total,₦${creatorFeesTotal}\n`;
+    csv += `Withdrawal Fees Total,₦${withdrawalFeesTotal}\n\n`;
+
+    csv += `Period,Creator Fees (NGN),Withdrawal Fees (NGN),Total Revenue (NGN)\n`;
+    chartData.forEach((row) => {
+      csv += `"${row.name}",${row.creatorFees},${row.withdrawalFees},${row.totalRevenue}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `databounty_revenue_report_${revenueTimeframe}_${Date.now()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#011438]">
@@ -543,25 +835,116 @@ export default function AdminDashboardClient() {
                   </div>
                 </div>
 
-                {/* Revenue Chart */}
-                <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-4">
-                  <h3 className="text-base font-bold text-white">Platform Revenue Breakdown</h3>
-                  <div className="h-64 w-full">
+                {/* Revenue Graph & Time Filters */}
+                <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#025BE5]/20 pb-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-[#029FFC]" />
+                        Platform Revenue Analytics
+                      </h3>
+                      <p className="text-xs text-slate-400">Interactive financial performance breakdown over time</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {/* Timeframe Filter Tabs */}
+                      <div className="flex items-center gap-1 p-1 bg-[#011438] rounded-xl border border-[#025BE5]/30">
+                        {[
+                          { id: 'today', label: 'Today' },
+                          { id: 'week', label: 'This Week' },
+                          { id: 'month', label: 'This Month' },
+                          { id: 'all', label: 'All Time' },
+                        ].map((tab) => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setRevenueTimeframe(tab.id as any)}
+                            className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                              revenueTimeframe === tab.id
+                                ? 'bg-[#025BE5] text-white shadow-md shadow-[#025BE5]/30'
+                                : 'text-slate-400 hover:text-white hover:bg-[#025BE5]/10'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Export Report Dropdown */}
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#025BE5]/20 hover:bg-[#025BE5]/30 border border-[#025BE5]/40 text-[#029FFC] font-semibold rounded-xl text-xs transition-all"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Export Report</span>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        </button>
+
+                        {isExportMenuOpen && (
+                          <div className="absolute right-0 mt-2 w-48 bg-[#011438] border border-[#025BE5]/30 rounded-xl shadow-2xl z-20 overflow-hidden text-xs">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsExportMenuOpen(false);
+                                handleExportPDF();
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-slate-200 hover:text-white hover:bg-[#025BE5]/20 flex items-center gap-2 transition-colors border-b border-[#025BE5]/15"
+                            >
+                              <Printer className="w-4 h-4 text-[#029FFC]" />
+                              <span>PDF Summary Report</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsExportMenuOpen(false);
+                                handleExportCSV();
+                              }}
+                              className="w-full px-4 py-2.5 text-left text-slate-200 hover:text-white hover:bg-[#025BE5]/20 flex items-center gap-2 transition-colors"
+                            >
+                              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                              <span>CSV Data Export</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Multi-layered Area Graph */}
+                  <div className="h-72 w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#029FFC" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#029FFC" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="colorCreator" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="colorWithdrawal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.4} />
+                            <stop offset="95%" stopColor="#F59E0B" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#025BE5/20" />
                         <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
-                        <YAxis stroke="#9ca3af" fontSize={12} />
+                        <YAxis stroke="#9ca3af" fontSize={12} tickFormatter={(v) => `₦${v.toLocaleString()}`} />
                         <Tooltip
                           contentStyle={{ backgroundColor: '#011438', borderColor: '#025BE5', borderRadius: '12px', color: '#fff' }}
-                          formatter={(value: any) => [`₦${Number(value).toLocaleString()}`, 'Amount']}
+                          formatter={(value: any, name: any) => [
+                            `₦${Number(value).toLocaleString()}`,
+                            name === 'totalRevenue' ? 'Total Revenue' : name === 'creatorFees' ? 'Creator Fees' : 'Withdrawal Fees',
+                          ]}
                         />
-                        <Bar dataKey="amount" radius={[6, 6, 0, 0]}>
-                          {chartData.map((entry, index) => (
-                            <Cell key={`bar-cell-${index}`} fill={entry.fill} />
-                          ))}
-                        </Bar>
-                      </BarChart>
+                        <Legend verticalAlign="top" height={36} wrapperStyle={{ color: '#9ca3af', fontSize: '12px' }} />
+                        <Area type="monotone" dataKey="totalRevenue" name="Total Revenue" stroke="#029FFC" strokeWidth={3} fillOpacity={1} fill="url(#colorTotal)" />
+                        <Area type="monotone" dataKey="creatorFees" name="Creator Fees" stroke="#10B981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCreator)" />
+                        <Area type="monotone" dataKey="withdrawalFees" name="Withdrawal Fees" stroke="#F59E0B" strokeWidth={2} fillOpacity={1} fill="url(#colorWithdrawal)" />
+                      </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
