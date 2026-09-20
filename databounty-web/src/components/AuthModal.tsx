@@ -8,7 +8,7 @@ import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle, Eye, 
 
 export function AuthModal() {
   const router = useRouter();
-  const { isAuthModalOpen, closeAuthModal, openAuthModal, authModalRole, login, signup, user, updateUser } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, openAuthModal, authModalRole, login, signup, user, updateUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<UserRole>(authModalRole === 'admin' ? 'tester' : (authModalRole || 'tester'));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -50,7 +50,7 @@ export function AuthModal() {
 
           {/* Close Button */}
           <button
-            onClick={() => { setIsSuspended(false); closeAuthModal(); }}
+            onClick={() => { setIsSuspended(false); logout(); closeAuthModal(); }}
             className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-red-500/20 rounded-full transition-colors"
           >
             <X className="w-5 h-5" />
@@ -82,7 +82,7 @@ export function AuthModal() {
 
             {/* Dismiss Button */}
             <button
-              onClick={() => { setIsSuspended(false); closeAuthModal(); }}
+              onClick={() => { setIsSuspended(false); logout(); closeAuthModal(); }}
               className="w-full py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 font-semibold rounded-xl text-sm transition-all"
             >
               Dismiss

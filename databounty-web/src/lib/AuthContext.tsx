@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Suspension enforcement: block login for suspended accounts
         if (profile.status === 'suspended') {
           await firebaseSignOut(auth);
+          setUser(null);
+          localStorage.removeItem('databounty_auth_user');
           const err = new Error('ACCOUNT_SUSPENDED');
           err.name = 'ACCOUNT_SUSPENDED';
           throw err;
@@ -153,6 +155,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       setIsAuthModalOpen(false);
     } catch (err: any) {
+      if (err.name === 'ACCOUNT_SUSPENDED' || err.message === 'ACCOUNT_SUSPENDED') {
+        setUser(null);
+        localStorage.removeItem('databounty_auth_user');
+        throw err;
+      }
       // Fallback for local testing if Firebase auth is unconfigured
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         throw new Error('Invalid credentials or user account not found. Please register first.');
