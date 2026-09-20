@@ -11,7 +11,8 @@ export async function POST(request: Request) {
   try {
     const { submissionId, taskTitle, userName, userEmail, rejectionReason } = await request.json();
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'support@databounty.sampidia.com';
+    const alertEmail = process.env.ADMIN_ALERT_EMAIL || process.env.ADMIN_EMAIL || 'alerts@databounty.sampidia.com';
+    const supportEmail = 'support@databounty.sampidia.com';
     const resendApiKey = process.env.RESEND_API_KEY;
     const from = process.env.RESEND_FROM_EMAIL || 'DataBounty <onboarding@resend.dev>';
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
           <p style="font-size: 15px; color: #f87171; margin: 0; font-weight: 600;">${rejectionReason || 'Proof does not satisfy task requirements.'}</p>
         </div>
 
-        <p style="font-size: 13px; color: #94a3b8;">If you believe this was in error, please contact support at ${adminEmail}.</p>
+        <p style="font-size: 13px; color: #94a3b8;">If you believe this was in error, please contact support at ${supportEmail}.</p>
       </div>
     `;
 
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. Send Email to Admin
+    // 2. Send Email to Admin Alert Address
     const adminSubject = `[Admin Alert] Submission Rejected: ${taskTitle}`;
     const adminHtml = `
       <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background-color: #011438; color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid rgba(2, 91, 229, 0.3);">
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
       headers: emailHeaders,
       body: JSON.stringify({
         from,
-        to: [adminEmail],
+        to: [alertEmail],
         subject: adminSubject,
         html: adminHtml,
       }),

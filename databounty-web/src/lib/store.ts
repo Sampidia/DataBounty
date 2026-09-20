@@ -163,6 +163,9 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
               }).catch((cErr) => console.warn('[Creator Lookup Error]', cErr));
             }
           }
+        } else {
+          // Increment pendingSpots for submissions awaiting creator review
+          updates.pendingSpots = increment(1);
         }
 
         await updateDoc(taskRef, updates);

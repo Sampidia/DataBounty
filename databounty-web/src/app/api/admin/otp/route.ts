@@ -8,7 +8,14 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, email, otp } = body;
 
-    const adminEmail = (process.env.ADMIN_EMAIL || 'support@databounty.sampidia.com').trim().toLowerCase();
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+
+    if (!adminEmail) {
+      return NextResponse.json(
+        { error: 'Server Configuration Error: ADMIN_EMAIL environment variable is not configured.' },
+        { status: 500 }
+      );
+    }
 
     if (!email || email.trim().toLowerCase() !== adminEmail) {
       return NextResponse.json(

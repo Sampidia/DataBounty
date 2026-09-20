@@ -4,7 +4,7 @@ export async function POST(request: Request) {
   try {
     const { withdrawalId, userName, userEmail, netAmount, bankName, accountNumber } = await request.json();
 
-    const adminEmail = process.env.ADMIN_EMAIL || 'support@databounty.sampidia.com';
+    const alertEmail = process.env.ADMIN_ALERT_EMAIL || process.env.ADMIN_EMAIL || 'alerts@databounty.sampidia.com';
     const resendApiKey = process.env.RESEND_API_KEY;
 
     if (!resendApiKey) {
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         from: process.env.RESEND_FROM_EMAIL || 'DataBounty <onboarding@resend.dev>',
-        to: [adminEmail],
+        to: [alertEmail],
         subject: `🚨 New Withdrawal Request: ₦${netAmount.toLocaleString()} - ${userName}`,
         html: `
           <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background-color: #011438; color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid rgba(2, 91, 229, 0.3);">

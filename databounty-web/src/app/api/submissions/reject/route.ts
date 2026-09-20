@@ -61,9 +61,11 @@ export async function POST(request: Request) {
         const tData = taskSnap.data()!;
         const updates: Record<string, any> = {};
 
-        // If it was previously approved, decrement completedSpots
+        // If it was previously approved, decrement completedSpots; if pending, decrement pendingSpots
         if (previousStatus === 'approved' && (tData.completedSpots || 0) > 0) {
           updates.completedSpots = FieldValue.increment(-1);
+        } else if ((previousStatus === 'pending' || previousStatus === 'pending_verification') && (tData.pendingSpots || 0) > 0) {
+          updates.pendingSpots = FieldValue.increment(-1);
         }
 
         // Always ensure task status is reset to 'active' if it's currently completed or has open capacity

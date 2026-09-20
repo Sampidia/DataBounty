@@ -297,7 +297,7 @@ export default function AdminDashboardClient() {
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="support@databounty.sampidia.com"
+                      placeholder="admin@example.com"
                       className="w-full pl-9 pr-4 py-2.5 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC]"
                     />
                   </div>

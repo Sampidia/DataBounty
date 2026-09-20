@@ -126,7 +126,8 @@ export async function POST(request: Request) {
               const tData = taskSnap.data()!;
               const newCompleted = (tData.completedSpots || 0) + 1;
               const updates: Record<string, any> = {
-                completedSpots: FieldValue.increment(1)
+                completedSpots: FieldValue.increment(1),
+                pendingSpots: FieldValue.increment(-1)
               };
               if (newCompleted >= (tData.totalSpots || 1)) {
                 updates.status = 'completed';

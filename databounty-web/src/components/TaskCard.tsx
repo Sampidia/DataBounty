@@ -12,6 +12,10 @@ interface TaskCardProps {
 export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female' }: TaskCardProps) {
   const percentage = Math.min(100, Math.round((task.completedSpots / task.totalSpots) * 100));
   const isFull = task.completedSpots >= task.totalSpots;
+  const pendingCount = task.pendingSpots || 0;
+  const reservedCount = task.reservedSpots || 0;
+  const takenSpots = task.completedSpots + pendingCount + reservedCount;
+  const isCapacityReached = takenSpots >= task.totalSpots;
 
   // Eligibility check
   const isStateEligible = task.targetState === 'All' || task.targetState === userState;
@@ -83,15 +87,23 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
       {/* Spots Progress & Action Button */}
       <div className="space-y-3 pt-2 border-t border-[#025BE5]/20">
         <div className="space-y-1">
-          <div className="flex justify-between text-[11px] text-slate-400 font-medium">
+          <div className="flex justify-between text-[11px] text-slate-400 font-medium items-center">
             <span>Spots Completed: {task.completedSpots} / {task.totalSpots}</span>
-            {task.reservedSpots && task.reservedSpots > 0 ? (
-              <span className="text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 text-[10px]">
-                {task.reservedSpots} Active Claim{task.reservedSpots > 1 ? 's' : ''}
-              </span>
-            ) : (
-              <span className="text-[#029FFC] font-bold">{percentage}%</span>
-            )}
+            <div className="flex items-center gap-1">
+              {pendingCount > 0 && (
+                <span className="text-[#029FFC] font-bold bg-[#025BE5]/20 px-1.5 py-0.5 rounded border border-[#029FFC]/30 text-[10px]">
+                  {pendingCount} Pending Review
+                </span>
+              )}
+              {reservedCount > 0 && (
+                <span className="text-amber-300 font-bold bg-amber-500/20 px-1.5 py-0.5 rounded border border-amber-500/30 text-[10px]">
+                  {reservedCount} Reserved
+                </span>
+              )}
+              {pendingCount === 0 && reservedCount === 0 && (
+                <span className="text-[#029FFC] font-bold">{percentage}%</span>
+              )}
+            </div>
           </div>
           <div className="w-full bg-[#011438] h-2 rounded-full overflow-hidden border border-[#025BE5]/20">
             <div
@@ -104,11 +116,13 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
         </div>
 
         <button
-          disabled={isFull || !isEligible}
+          disabled={isFull || isCapacityReached || !isEligible}
           onClick={() => onSelectTask(task)}
           className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
             isFull
               ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              : isCapacityReached
+              ? 'bg-slate-800/80 text-amber-300 border border-amber-500/30 cursor-not-allowed'
               : !isEligible
               ? 'bg-slate-800/60 text-slate-500 cursor-not-allowed'
               : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white shadow-md hover:scale-[1.01]'
@@ -116,6 +130,8 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
         >
           {isFull ? (
             'Bounty Completed'
+          ) : isCapacityReached ? (
+            'All Spots Filled (Pending Review)'
           ) : !isEligible ? (
             'Not Eligible (Location/Gender)'
           ) : (
