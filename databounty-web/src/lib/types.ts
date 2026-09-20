@@ -33,6 +33,7 @@ export interface UserProfile {
   walletBalance: number;
   escrowBalance: number;
   role: UserRole;
+  status?: 'active' | 'suspended';
 }
 
 export interface BountyTask {

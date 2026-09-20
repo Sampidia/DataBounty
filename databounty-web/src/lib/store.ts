@@ -21,7 +21,8 @@ export const INITIAL_USER: UserProfile = {
   accountName: 'GUEST',
   walletBalance: 0,
   escrowBalance: 0,
-  role: 'tester'
+  role: 'tester',
+  status: 'active',
 };
 
 export const INITIAL_CREATOR: UserProfile = {
@@ -40,7 +41,8 @@ export const INITIAL_CREATOR: UserProfile = {
   accountName: 'CREATOR',
   walletBalance: 0,
   escrowBalance: 0,
-  role: 'creator'
+  role: 'creator',
+  status: 'active',
 };
 
 export const INITIAL_TASKS: BountyTask[] = [];

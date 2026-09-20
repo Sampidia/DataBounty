@@ -4,18 +4,20 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { UserRole } from '@/lib/types';
-import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle } from 'lucide-react';
+import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 export function AuthModal() {
   const router = useRouter();
-  const { isAuthModalOpen, closeAuthModal, authModalRole, login, signup, user, updateUser } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, openAuthModal, authModalRole, login, signup, user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState<UserRole>(authModalRole === 'admin' ? 'tester' : (authModalRole || 'tester'));
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   // Sync activeTab if modal is opened with specific role
   React.useEffect(() => {
@@ -24,11 +26,80 @@ export function AuthModal() {
     }
   }, [authModalRole, isAuthModalOpen]);
 
+  // Check for suspension notice flag set by the real-time session listener
+  React.useEffect(() => {
+    if (isAuthModalOpen) return;
+    const suspendedFlag = localStorage.getItem('databounty_suspended_notice');
+    if (suspendedFlag === 'true') {
+      localStorage.removeItem('databounty_suspended_notice');
+      setIsSuspended(true);
+      // Open the modal to show the notice
+      openAuthModal('tester');
+    }
+  }, [isAuthModalOpen]);
+
   if (!isAuthModalOpen) return null;
+
+  // Suspension Notice Overlay — shown instead of login form when account is suspended
+  if (isSuspended) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+        <div className="relative w-full max-w-sm bg-[#031F51] border border-red-500/30 rounded-2xl shadow-2xl shadow-red-500/10 overflow-hidden text-white">
+          {/* Red alert top bar */}
+          <div className="h-1.5 w-full bg-gradient-to-r from-red-600 via-red-500 to-rose-500" />
+
+          {/* Close Button */}
+          <button
+            onClick={() => { setIsSuspended(false); closeAuthModal(); }}
+            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-white hover:bg-red-500/20 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="p-8 flex flex-col items-center text-center space-y-5">
+            {/* Icon */}
+            <div className="w-14 h-14 rounded-2xl bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+              <AlertCircle className="w-7 h-7 text-red-400" />
+            </div>
+
+            {/* Title */}
+            <div className="space-y-1">
+              <h3 className="text-lg font-extrabold text-white tracking-tight">Account Notice</h3>
+              <div className="w-10 h-0.5 bg-gradient-to-r from-red-500 to-rose-400 mx-auto rounded-full" />
+            </div>
+
+            {/* Message */}
+            <p className="text-sm text-slate-300 leading-relaxed">
+              Your account has been deleted or suspended. Please contact
+            </p>
+            <a
+              href="mailto:support@databounty.sampidia.com"
+              className="text-[#029FFC] font-semibold text-sm hover:underline transition-colors"
+            >
+              support@databounty.sampidia.com
+            </a>
+            <p className="text-sm text-slate-300">for assistance.</p>
+
+            {/* Dismiss Button */}
+            <button
+              onClick={() => { setIsSuspended(false); closeAuthModal(); }}
+              className="w-full py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-300 font-semibold rounded-xl text-sm transition-all"
+            >
+              Dismiss
+            </button>
+          </div>
+
+          {/* Bottom accent */}
+          <div className="h-1 w-full bg-gradient-to-r from-red-600 via-red-500 to-rose-500 opacity-50" />
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setIsSuspended(false);
     setIsSubmitting(true);
 
     try {
@@ -41,7 +112,11 @@ export function AuthModal() {
         router.push('/creator');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed. Please check your details.');
+      if (err.name === 'ACCOUNT_SUSPENDED' || err.message === 'ACCOUNT_SUSPENDED') {
+        setIsSuspended(true);
+      } else {
+        setErrorMsg(err.message || 'Authentication failed. Please check your details.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -192,13 +267,21 @@ export function AuthModal() {
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-4 py-2.5 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC] focus:ring-1 focus:ring-[#029FFC] transition-all"
+                  className="w-full pl-9 pr-10 py-2.5 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC] focus:ring-1 focus:ring-[#029FFC] transition-all"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-white transition-colors focus:outline-none"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4 text-[#029FFC]" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

@@ -72,6 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             (userSnap) => {
               if (userSnap.exists()) {
                 const profileData = userSnap.data() as UserProfile;
+                // If account becomes suspended while session is active, sign out
+                if (profileData.status === 'suspended') {
+                  firebaseSignOut(auth).catch(() => {});
+                  setUser(null);
+                  localStorage.removeItem('databounty_auth_user');
+                  // Signal suspension state via a global localStorage flag so AuthModal can show notice
+                  localStorage.setItem('databounty_suspended_notice', 'true');
+                  return;
+                }
                 setUser(profileData);
                 localStorage.setItem('databounty_auth_user', JSON.stringify(profileData));
               }
@@ -103,6 +112,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (userSnap.exists()) {
         const profile = userSnap.data() as UserProfile;
+
+        // Suspension enforcement: block login for suspended accounts
+        if (profile.status === 'suspended') {
+          await firebaseSignOut(auth);
+          const err = new Error('ACCOUNT_SUSPENDED');
+          err.name = 'ACCOUNT_SUSPENDED';
+          throw err;
+        }
+
         if (targetRole && targetRole !== 'admin' && profile.role !== targetRole) {
           profile.role = targetRole;
           await updateDoc(userDocRef, { role: targetRole });
