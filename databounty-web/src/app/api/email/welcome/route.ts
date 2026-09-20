@@ -54,7 +54,7 @@ export async function POST(request: Request) {
           <!-- Logo Header -->
           <tr>
             <td style="padding:32px 40px 20px;text-align:center;border-bottom:1px solid rgba(2,91,229,0.2);">
-              <img src="https://databounty.sampidia.com/Databounty_logo.webp" alt="DataBounty Logo" style="max-width:180px;height:auto;display:inline-block;border:0;" />
+              <img src="https://databounty.sampidia.com/Databounty_logo.webp" alt="DataBounty Logo" width="260" style="width:260px;max-width:100%;height:auto;display:inline-block;border:0;" />
               <p style="color:#94a3b8;font-size:12px;margin:12px 0 0;">Nigeria's Premier Micro-Tasking & QA Platform</p>
             </td>
           </tr>
