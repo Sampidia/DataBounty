@@ -8,7 +8,7 @@ import { TopUpModal } from '@/components/TopUpModal';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_SUBMISSIONS, approveSubmissionInFirestore } from '@/lib/store';
 import { BountyTask, TaskSubmission } from '@/lib/types';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
@@ -104,25 +104,20 @@ export default function CreatorDashboard() {
     }
     setIsRejecting(true);
     try {
-      const subRef = doc(db, 'submissions', rejectionModalSub.id);
-      await updateDoc(subRef, {
-        status: 'rejected',
-        rejectionReason: rejectionReason.trim(),
-        verifiedAt: new Date().toISOString()
-      });
-
-      // Send rejection notification email via API route (Resend)
-      await fetch('/api/email/rejection', {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/submissions/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submissionId: rejectionModalSub.id,
-          taskTitle: rejectionModalSub.taskTitle,
-          userName: rejectionModalSub.userName,
-          userEmail: rejectionModalSub.userEmail,
           rejectionReason: rejectionReason.trim(),
+          idToken
         }),
       });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to reject submission');
+      }
 
       alert('Submission rejected and notification email dispatched.');
       setRejectionModalSub(null);

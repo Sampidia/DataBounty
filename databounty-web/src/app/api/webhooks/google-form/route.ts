@@ -118,7 +118,25 @@ export async function POST(request: Request) {
           walletBalance: FieldValue.increment(rewardAmount)
         }, { merge: true });
 
-        // Note: submitTaskProofToFirestore already incremented completedSpots and decremented reservedSpots when claim was registered
+        if (matchedDoc.taskId) {
+          try {
+            const taskRef = adminDb.collection('tasks').doc(matchedDoc.taskId);
+            const taskSnap = await taskRef.get();
+            if (taskSnap.exists) {
+              const tData = taskSnap.data()!;
+              const newCompleted = (tData.completedSpots || 0) + 1;
+              const updates: Record<string, any> = {
+                completedSpots: FieldValue.increment(1)
+              };
+              if (newCompleted >= (tData.totalSpots || 1)) {
+                updates.status = 'completed';
+              }
+              await taskRef.set(updates, { merge: true });
+            }
+          } catch (tErr) {
+            console.warn('[Webhook Task Spot Update Warning]', tErr);
+          }
+        }
         console.log(`[Google Form Webhook Option 1 SUCCESS] Approved pending submission ${matchedDoc.id} for user ${rewardedUserId}, credited ₦${rewardAmount}`);
       } else {
         // 2. Order B: Submit form first -> Claim second (Auto-create approved claim if user exists & spot available)

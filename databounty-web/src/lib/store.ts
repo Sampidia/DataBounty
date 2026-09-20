@@ -134,32 +134,37 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
       const taskSnap = await getDoc(taskRef);
       if (taskSnap.exists()) {
         const tData = taskSnap.data();
-        const newCompleted = (tData.completedSpots || 0) + 1;
         const updates: Record<string, any> = {
-          completedSpots: increment(1),
           reservedSpots: increment(-1)
         };
-        if (newCompleted >= (tData.totalSpots || 1)) {
-          updates.status = 'completed';
-          if (tData.creatorId) {
-            getDoc(doc(db, 'users', tData.creatorId)).then((creatorSnap) => {
-              const creatorEmail = creatorSnap.exists() ? creatorSnap.data().email : null;
-              if (creatorEmail) {
-                fetch('/api/email/task-complete', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    taskId: submission.taskId,
-                    taskTitle: tData.title || submission.taskTitle,
-                    creatorId: tData.creatorId,
-                    creatorEmail,
-                    totalSpots: tData.totalSpots || newCompleted,
-                  }),
-                }).catch((eErr) => console.warn('[Task Complete Email Send Error]', eErr));
-              }
-            }).catch((cErr) => console.warn('[Creator Lookup Error]', cErr));
+
+        // Only increment completedSpots if submission is pre-approved (e.g. Order B webhook)
+        if (submission.status === 'approved') {
+          const newCompleted = (tData.completedSpots || 0) + 1;
+          updates.completedSpots = increment(1);
+          if (newCompleted >= (tData.totalSpots || 1)) {
+            updates.status = 'completed';
+            if (tData.creatorId) {
+              getDoc(doc(db, 'users', tData.creatorId)).then((creatorSnap) => {
+                const creatorEmail = creatorSnap.exists() ? creatorSnap.data().email : null;
+                if (creatorEmail) {
+                  fetch('/api/email/task-complete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      taskId: submission.taskId,
+                      taskTitle: tData.title || submission.taskTitle,
+                      creatorId: tData.creatorId,
+                      creatorEmail,
+                      totalSpots: tData.totalSpots || newCompleted,
+                    }),
+                  }).catch((eErr) => console.warn('[Task Complete Email Send Error]', eErr));
+                }
+              }).catch((cErr) => console.warn('[Creator Lookup Error]', cErr));
+            }
           }
         }
+
         await updateDoc(taskRef, updates);
       }
     }
