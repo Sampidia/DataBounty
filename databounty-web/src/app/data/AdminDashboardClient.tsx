@@ -402,7 +402,7 @@ export default function AdminDashboardClient() {
         const wFees = withdrawals
           .filter((w) => {
             if (w.status !== 'COMPLETED') return false;
-            const d = new Date(w.updatedAt || w.createdAt || Date.now());
+            const d = new Date(w.updatedAt || w.requestedAt || Date.now());
             const isToday = d.toDateString() === now.toDateString();
             const hHour = d.getHours();
             return isToday && hHour >= hStart && hHour < hEnd;
@@ -434,7 +434,7 @@ export default function AdminDashboardClient() {
         const wFees = withdrawals
           .filter((w) => {
             if (w.status !== 'COMPLETED') return false;
-            const wDate = new Date(w.updatedAt || w.createdAt || Date.now());
+            const wDate = new Date(w.updatedAt || w.requestedAt || Date.now());
             return wDate.toDateString() === d.toDateString();
           })
           .reduce((sum, w) => sum + (w.fee || 50), 0);
@@ -466,7 +466,7 @@ export default function AdminDashboardClient() {
         const wFees = withdrawals
           .filter((w) => {
             if (w.status !== 'COMPLETED') return false;
-            const d = new Date(w.updatedAt || w.createdAt || Date.now());
+            const d = new Date(w.updatedAt || w.requestedAt || Date.now());
             const diffDays = Math.floor((now.getTime() - d.getTime()) / (1000 * 3600 * 24));
             return diffDays >= (28 - dayEnd) && diffDays < (28 - dayStart);
           })
@@ -496,7 +496,7 @@ export default function AdminDashboardClient() {
       const wFees = withdrawals
         .filter((w) => {
           if (w.status !== 'COMPLETED') return false;
-          const d = new Date(w.updatedAt || w.createdAt || Date.now());
+          const d = new Date(w.updatedAt || w.requestedAt || Date.now());
           return d.getMonth() === mIdx;
         })
         .reduce((sum, w) => sum + (w.fee || 50), 0);
