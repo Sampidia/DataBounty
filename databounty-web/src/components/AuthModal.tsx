@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { UserRole } from '@/lib/types';
 import { X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { TurnstileWidget } from '@/components/TurnstileWidget';
 
 export function AuthModal() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export function AuthModal() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [resetTurnstile, setResetTurnstile] = useState<number>(0);
 
   // Sync activeTab if modal is opened with specific role
   React.useEffect(() => {
@@ -104,6 +107,28 @@ export function AuthModal() {
 
     try {
       if (isSignUp) {
+        if (!turnstileToken) {
+          setErrorMsg('Security verification required. Please complete the captcha check.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const verifyRes = await fetch('/api/auth/verify-turnstile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: turnstileToken }),
+        });
+
+        const verifyData = await verifyRes.json();
+
+        if (!verifyRes.ok || !verifyData.success) {
+          setErrorMsg(verifyData.error || 'Security verification failed. Please try again.');
+          setTurnstileToken('');
+          setResetTurnstile((prev) => prev + 1);
+          setIsSubmitting(false);
+          return;
+        }
+
         await signup(email, password, activeTab, name);
       } else {
         await login(email, password, activeTab);
@@ -284,6 +309,16 @@ export function AuthModal() {
                 </button>
               </div>
             </div>
+
+            {/* Cloudflare Turnstile Bot Protection (Registration Only) */}
+            {isSignUp && (
+              <TurnstileWidget
+                onVerify={(token) => setTurnstileToken(token)}
+                onExpire={() => setTurnstileToken('')}
+                onError={() => setTurnstileToken('')}
+                resetSignal={resetTurnstile}
+              />
+            )}
 
             {/* Submit Button */}
             <button

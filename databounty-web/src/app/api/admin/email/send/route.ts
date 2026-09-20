@@ -71,13 +71,8 @@ export async function POST(request: Request) {
           <!-- Logo / Brand Header -->
           <tr>
             <td style="padding:32px 40px 20px;text-align:center;border-bottom:1px solid rgba(2,91,229,0.2);">
-              <div style="display:inline-flex;align-items:center;gap:10px;">
-                <div style="width:40px;height:40px;background:linear-gradient(135deg,#025BE5,#029FFC);border-radius:10px;display:flex;align-items:center;justify-content:center;">
-                  <span style="color:#fff;font-weight:900;font-size:18px;">D</span>
-                </div>
-                <span style="color:#fff;font-size:22px;font-weight:900;letter-spacing:-0.5px;">DataBounty</span>
-              </div>
-              <p style="color:#94a3b8;font-size:12px;margin:8px 0 0;">Official Communication from DataBounty Platform</p>
+              <img src="https://databounty.sampidia.com/Databounty_logo.webp" alt="DataBounty Logo" style="max-width:180px;height:auto;display:inline-block;border:0;" />
+              <p style="color:#94a3b8;font-size:12px;margin:12px 0 0;">Official Communication from DataBounty Platform</p>
             </td>
           </tr>
 

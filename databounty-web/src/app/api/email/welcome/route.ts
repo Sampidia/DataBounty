@@ -33,45 +33,87 @@ export async function POST(request: Request) {
       : `Welcome to DataBounty — Start Earning Today!`;
 
     const html = `
-      <div style="font-family: 'Plus Jakarta Sans', system-ui, sans-serif; background-color: #011438; color: #ffffff; padding: 24px; border-radius: 16px; border: 1px solid rgba(2, 91, 229, 0.3);">
-        <div style="border-bottom: 2px solid #025BE5; padding-bottom: 12px; margin-bottom: 20px;">
-          <h2 style="color: #029FFC; margin: 0; font-size: 22px;">Welcome to DataBounty! 🎉</h2>
-          <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0 0;">Nigeria's Premier Micro-Tasking & QA Platform</p>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#010d26;font-family:'Segoe UI',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#010d26;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#031F51;border-radius:16px;overflow:hidden;border:1px solid rgba(2,91,229,0.3);">
 
-        <p style="font-size: 15px; color: #e2e8f0;">Hello <strong>${name || 'User'}</strong>,</p>
+          <!-- Header Gradient Bar -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#025BE5,#0379FA,#029FFC);height:5px;"></td>
+          </tr>
 
-        ${
-          isCreator
-            ? `<p style="font-size: 14px; color: #cbd5e1; leading-relaxed: true;">
-                Thank you for joining DataBounty as a <strong>Campaign Creator</strong>! You can now publish bounty campaigns for Google Form surveys, Mobile App testing, or Web bug reports with custom demographic targeting.
+          <!-- Logo Header -->
+          <tr>
+            <td style="padding:32px 40px 20px;text-align:center;border-bottom:1px solid rgba(2,91,229,0.2);">
+              <img src="https://databounty.sampidia.com/Databounty_logo.webp" alt="DataBounty Logo" style="max-width:180px;height:auto;display:inline-block;border:0;" />
+              <p style="color:#94a3b8;font-size:12px;margin:12px 0 0;">Nigeria's Premier Micro-Tasking & QA Platform</p>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding:36px 40px;">
+              <h2 style="color:#ffffff;font-size:20px;font-weight:700;margin:0 0 16px;line-height:1.3;">Welcome, ${name || 'User'}! 🎉</h2>
+              ${
+                isCreator
+                  ? `<p style="color:#cbd5e1;font-size:14px;line-height:1.75;margin:0 0 20px;">
+                      Thank you for joining as a <strong>Campaign Creator</strong>! You can now publish bounty campaigns for Google Form surveys, Mobile App testing, or Web bug reports with custom demographic targeting.
+                    </p>
+                    <div style="background-color:#011438;padding:20px;border-radius:12px;border:1px solid rgba(2,159,252,0.2);margin-bottom:20px;">
+                      <h4 style="color:#029FFC;margin:0 0 10px 0;font-size:15px;">Get Started in 3 Simple Steps:</h4>
+                      <ol style="margin:0;padding-left:20px;font-size:13px;color:#e2e8f0;line-height:1.8;">
+                        <li>Go to your <strong>Creator Dashboard</strong>.</li>
+                        <li>Click <strong>Publish New Bounty Task</strong> and set your reward & demographic targets.</li>
+                        <li>Fund your campaign escrow and start receiving verified tester responses!</li>
+                      </ol>
+                    </div>`
+                  : `<p style="color:#cbd5e1;font-size:14px;line-height:1.75;margin:0 0 20px;">
+                      Thank you for joining as a <strong>Bounty Tester</strong>! You are now ready to earn Naira by completing micro-tasks, surveys, app tests, and bug reports.
+                    </p>
+                    <div style="background-color:#011438;padding:20px;border-radius:12px;border:1px solid rgba(2,159,252,0.2);margin-bottom:20px;">
+                      <h4 style="color:#029FFC;margin:0 0 10px 0;font-size:15px;">How to Start Earning:</h4>
+                      <ol style="margin:0;padding-left:20px;font-size:13px;color:#e2e8f0;line-height:1.8;">
+                        <li>Browse active tasks on the <strong>Tester Task Feed</strong>.</li>
+                        <li>Complete tasks matching your demographic profile.</li>
+                        <li>Get rewards credited directly to your wallet and cash out to your Nigerian bank account!</li>
+                      </ol>
+                    </div>`
+              }
+              <p style="color:#94a3b8;font-size:13px;margin:24px 0 0;">
+                If you have any questions or need assistance, feel free to contact support at <a href="mailto:support@databounty.sampidia.com" style="color:#029FFC;text-decoration:none;">support@databounty.sampidia.com</a>.
               </p>
-              <div style="background-color: #031F51; padding: 16px; border-radius: 12px; border: 1px solid rgba(2, 159, 252, 0.2); margin: 20px 0;">
-                <h4 style="color: #029FFC; margin: 0 0 8px 0;">Get Started in 3 Simple Steps:</h4>
-                <ol style="margin: 0; padding-left: 20px; font-size: 13px; color: #e2e8f0;">
-                  <li style="margin-bottom: 6px;">Go to your <strong>Creator Dashboard</strong>.</li>
-                  <li style="margin-bottom: 6px;">Click <strong>Publish New Bounty Task</strong> and set your reward & demographic targets.</li>
-                  <li>Fund your campaign escrow and start receiving verified tester responses!</li>
-                </ol>
-              </div>`
-            : `<p style="font-size: 14px; color: #cbd5e1; leading-relaxed: true;">
-                Thank you for joining DataBounty as a <strong>Bounty Tester</strong>! You are now ready to earn Naira by completing micro-tasks, surveys, app tests, and bug reports.
-              </p>
-              <div style="background-color: #031F51; padding: 16px; border-radius: 12px; border: 1px solid rgba(2, 159, 252, 0.2); margin: 20px 0;">
-                <h4 style="color: #029FFC; margin: 0 0 8px 0;">How to Start Earning:</h4>
-                <ol style="margin: 0; padding-left: 20px; font-size: 13px; color: #e2e8f0;">
-                  <li style="margin-bottom: 6px;">Browse active tasks on the <strong>Tester Task Feed</strong>.</li>
-                  <li style="margin-bottom: 6px;">Complete tasks matching your demographic profile.</li>
-                  <li>Get rewards credited directly to your wallet and cash out to your Nigerian bank account!</li>
-                </ol>
-              </div>`
-        }
+            </td>
+          </tr>
 
-        <p style="font-size: 13px; color: #94a3b8; margin-top: 24px;">
-          If you have any questions, feel free to reply to this email or contact support.
-        </p>
-      </div>
-    `;
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px 28px;text-align:center;border-top:1px solid rgba(2,91,229,0.2);">
+              <p style="color:#64748b;font-size:11px;margin:0;">
+                DataBounty &bull; <a href="https://databounty.sampidia.com" style="color:#029FFC;text-decoration:none;">databounty.sampidia.com</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Bottom Gradient Bar -->
+          <tr>
+            <td style="background:linear-gradient(90deg,#025BE5,#0379FA,#029FFC);height:3px;"></td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 
     await fetch('https://api.resend.com/emails', {
       method: 'POST',
