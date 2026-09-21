@@ -132,45 +132,17 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
     await setDoc(subRef, cleanSubmission);
 
     if (submission.taskId) {
-      const taskRef = doc(db, 'tasks', submission.taskId);
-      const taskSnap = await getDoc(taskRef);
-      if (taskSnap.exists()) {
-        const tData = taskSnap.data();
-        const updates: Record<string, any> = {
-          reservedSpots: increment(-1)
-        };
-
-        // Only increment completedSpots if submission is pre-approved (e.g. Order B webhook)
-        if (submission.status === 'approved') {
-          const newCompleted = (tData.completedSpots || 0) + 1;
-          updates.completedSpots = increment(1);
-          if (newCompleted >= (tData.totalSpots || 1)) {
-            updates.status = 'completed';
-            if (tData.creatorId) {
-              getDoc(doc(db, 'users', tData.creatorId)).then((creatorSnap) => {
-                const creatorEmail = creatorSnap.exists() ? creatorSnap.data().email : null;
-                if (creatorEmail) {
-                  fetch('/api/email/task-complete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      taskId: submission.taskId,
-                      taskTitle: tData.title || submission.taskTitle,
-                      creatorId: tData.creatorId,
-                      creatorEmail,
-                      totalSpots: tData.totalSpots || newCompleted,
-                    }),
-                  }).catch((eErr) => console.warn('[Task Complete Email Send Error]', eErr));
-                }
-              }).catch((cErr) => console.warn('[Creator Lookup Error]', cErr));
-            }
-          }
-        } else {
-          // Increment pendingSpots for submissions awaiting creator review
-          updates.pendingSpots = increment(1);
-        }
-
-        await updateDoc(taskRef, updates);
+      try {
+        await fetch('/api/tasks/submit-spots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            taskId: submission.taskId,
+            isApproved: submission.status === 'approved',
+          }),
+        });
+      } catch (spotErr) {
+        console.warn('[Task Submit Spots API Call Warning]', spotErr);
       }
     }
   } catch (err: any) {

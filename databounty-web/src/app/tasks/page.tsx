@@ -149,8 +149,9 @@ export default function TasksPage() {
     reserveTaskSpotInFirestore(task.id);
   };
 
-  const handleCloseTaskModal = () => {
-    if (selectedTask?.id && timerSeconds > 0) {
+  const handleCloseTaskModal = (isSubmitted?: boolean | React.SyntheticEvent) => {
+    const didSubmit = isSubmitted === true;
+    if (selectedTask?.id && timerSeconds > 0 && !didSubmit) {
       releaseTaskSpotInFirestore(selectedTask.id);
     }
     setSelectedTask(null);
@@ -223,12 +224,12 @@ export default function TasksPage() {
           : `Submission received! Your proof has been submitted to the creator for verification.`
       );
 
-      handleCloseTaskModal();
+      handleCloseTaskModal(true);
     } catch (err: any) {
       if (err?.message?.includes('ALREADY_VERIFIED_WEBHOOK') || err?.message?.includes('already verified via Google Form')) {
         const reward = selectedTask?.rewardPerUser || 500;
         const title = selectedTask?.title || 'Google Form Bounty Task';
-        handleCloseTaskModal();
+        handleCloseTaskModal(true);
         setVerifiedRewardModal({
           isOpen: true,
           rewardAmount: reward,
