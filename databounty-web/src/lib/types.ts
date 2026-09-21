@@ -48,7 +48,7 @@ export interface BountyTask {
   completedSpots: number;
   reservedSpots?: number;
   pendingSpots?: number;
-  status: 'active' | 'completed' | 'paused';
+  status: 'active' | 'completed' | 'paused' | 'suspended';
   formLink?: string;
   appDownloadUrl?: string;
   websiteUrl?: string;

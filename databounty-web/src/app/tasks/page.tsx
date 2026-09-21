@@ -95,6 +95,8 @@ export default function TasksPage() {
   }, [isTimerRunning, timerSeconds, selectedTask?.id]);
 
   const filteredTasks = tasks.filter((task) => {
+    if (task.status === 'suspended') return false;
+
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchTitle = task.title.toLowerCase().includes(q);

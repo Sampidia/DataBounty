@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_WITHDRAWALS, INITIAL_TRANSACTIONS } from '@/lib/store';
-import { BountyTask, WithdrawalRequest, WithdrawalStatus, UserProfile } from '@/lib/types';
+import { BountyTask, WithdrawalRequest, WithdrawalStatus, UserProfile, TaskSubmission } from '@/lib/types';
 import { findBankByTag } from '@/lib/banks';
 import {
   BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend
@@ -13,11 +13,12 @@ import {
 import {
   Shield, Lock, Download, CheckCircle2, FileSpreadsheet, Mail, KeyRound, AlertCircle,
   Sparkles, RefreshCw, Users, UserX, UserCheck, Send, Search, ChevronDown, BarChart3, Printer,
+  ListChecks, Eye, EyeOff, CheckSquare, XCircle, Clock
 } from 'lucide-react';
 import { auth, db } from '@/lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 
-type AdminTab = 'revenue' | 'users' | 'email';
+type AdminTab = 'revenue' | 'tasks' | 'users' | 'email';
 
 export default function AdminDashboardClient() {
   const { isAdminAuthenticated, setAdminAuthenticated } = useAuth();
@@ -37,6 +38,11 @@ export default function AdminDashboardClient() {
   const [infoMsg, setInfoMsg] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
+
+  // Tasks Manager Tab State
+  const [allSubmissions, setAllSubmissions] = useState<TaskSubmission[]>([]);
+  const [taskSearch, setTaskSearch] = useState('');
+  const [togglingTaskId, setTogglingTaskId] = useState<string | null>(null);
 
   // User Accounts Tab State
   const [users, setUsers] = useState<UserProfile[]>([]);
@@ -97,7 +103,7 @@ export default function AdminDashboardClient() {
 
       // Real-time listener for all platform tasks to calculate live Creator Service Fees
       const tasksRef = collection(db, 'tasks');
-      const unsub = onSnapshot(
+      const unsubTasks = onSnapshot(
         tasksRef,
         (snap) => {
           if (!snap.empty) {
@@ -110,9 +116,74 @@ export default function AdminDashboardClient() {
         (err) => console.warn('[AdminDashboard] Fetch tasks error:', err)
       );
 
-      return () => unsub();
+      // Real-time listener for all submissions to compute task approval metrics
+      const subsRef = collection(db, 'submissions');
+      const unsubSubs = onSnapshot(
+        subsRef,
+        (snap) => {
+          if (!snap.empty) {
+            const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TaskSubmission));
+            setAllSubmissions(loaded);
+          } else {
+            setAllSubmissions([]);
+          }
+        },
+        (err) => console.warn('[AdminDashboard] Fetch submissions error:', err)
+      );
+
+      return () => {
+        unsubTasks();
+        unsubSubs();
+      };
     }
   }, [isAdminAuthenticated]);
+
+  // Aggregate submission counts per task ID
+  const submissionStatsMap = React.useMemo(() => {
+    const map: Record<string, { approved: number; pending: number; rejected: number }> = {};
+    allSubmissions.forEach((s) => {
+      if (!map[s.taskId]) {
+        map[s.taskId] = { approved: 0, pending: 0, rejected: 0 };
+      }
+      if (s.status === 'approved') {
+        map[s.taskId].approved += 1;
+      } else if (s.status === 'rejected') {
+        map[s.taskId].rejected += 1;
+      } else {
+        map[s.taskId].pending += 1;
+      }
+    });
+    return map;
+  }, [allSubmissions]);
+
+  // Toggle task status (Suspend vs Activate)
+  const handleToggleTaskStatus = async (taskId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    setTogglingTaskId(taskId);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/admin/tasks/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+        },
+        body: JSON.stringify({ taskId, status: newStatus }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update task status');
+      }
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: newStatus as any } : t))
+      );
+    } catch (err: any) {
+      console.error('[AdminDashboard] Task status toggle error:', err);
+      alert(`Failed to update task status: ${err.message}`);
+    } finally {
+      setTogglingTaskId(null);
+    }
+  };
 
   // Toggle user account status
   const handleToggleUserStatus = async (userId: string, currentStatus: 'active' | 'suspended' | undefined) => {
@@ -793,6 +864,7 @@ export default function AdminDashboardClient() {
             <div className="flex gap-1.5 p-1.5 bg-[#031F51] border border-[#025BE5]/25 rounded-2xl w-fit">
               {([
                 { id: 'revenue', label: 'Revenue & Withdrawals', icon: BarChart3 },
+                { id: 'tasks', label: 'Tasks Manager', icon: ListChecks },
                 { id: 'users', label: 'User Accounts', icon: Users },
                 { id: 'email', label: 'Email Dispatcher', icon: Send },
               ] as { id: AdminTab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
@@ -1053,6 +1125,210 @@ export default function AdminDashboardClient() {
                             </tr>
                           );
                         })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ═══════════════════════════ TAB: TASKS MANAGER ═══════════════════════════ */}
+            {activeAdminTab === 'tasks' && (
+              <>
+                {/* Metric Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-5">
+                  <div className="glass-card p-5 rounded-2xl border border-[#025BE5]/25 space-y-2">
+                    <div className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                      <ListChecks className="w-3.5 h-3.5 text-[#029FFC]" /> Total Campaigns
+                    </div>
+                    <div className="text-3xl font-black text-white">{tasks.length}</div>
+                    <p className="text-[11px] text-slate-400">All registered bounty tasks</p>
+                  </div>
+
+                  <div className="glass-card p-5 rounded-2xl border border-emerald-500/20 space-y-2">
+                    <div className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Visible / Active
+                    </div>
+                    <div className="text-3xl font-black text-emerald-400">
+                      {tasks.filter((t) => t.status !== 'suspended').length}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Visible in Tasks Explorer</p>
+                  </div>
+
+                  <div className="glass-card p-5 rounded-2xl border border-red-500/20 space-y-2">
+                    <div className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                      <EyeOff className="w-3.5 h-3.5 text-red-400" /> Suspended Tasks
+                    </div>
+                    <div className="text-3xl font-black text-red-400">
+                      {tasks.filter((t) => t.status === 'suspended').length}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Hidden from Tasks Explorer</p>
+                  </div>
+
+                  <div className="glass-card p-5 rounded-2xl border border-[#025BE5]/25 space-y-2">
+                    <div className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-[#029FFC]" /> Total Escrow Budget
+                    </div>
+                    <div className="text-3xl font-black text-[#029FFC]">
+                      ₦{tasks.reduce((sum, t) => sum + (t.totalBudget || 0), 0).toLocaleString()}
+                    </div>
+                    <p className="text-[11px] text-slate-400">Combined campaign budgets</p>
+                  </div>
+                </div>
+
+                {/* Task Table Panel */}
+                <div className="glass-panel p-6 rounded-2xl border border-[#025BE5]/25 space-y-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <ListChecks className="w-5 h-5 text-[#029FFC]" />
+                        Bounty Tasks Manager
+                      </h3>
+                      <p className="text-xs text-slate-400">Manage campaign visibility, payouts per tester, and submission stats</p>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative w-full md:w-80">
+                      <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={taskSearch}
+                        onChange={(e) => setTaskSearch(e.target.value)}
+                        placeholder="Search by task title, description, or creator..."
+                        className="w-full pl-9 pr-4 py-2 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#029FFC] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#011438] text-slate-300 uppercase tracking-wider border-b border-[#025BE5]/30">
+                        <tr>
+                          <th className="p-3">Task Details</th>
+                          <th className="p-3">Creator</th>
+                          <th className="p-3">Pay per Tester</th>
+                          <th className="p-3">Approved</th>
+                          <th className="p-3">Pending</th>
+                          <th className="p-3">Rejected</th>
+                          <th className="p-3">Spots</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#025BE5]/20 text-slate-300">
+                        {(() => {
+                          const filteredAdminTasks = tasks.filter((t) => {
+                            const q = taskSearch.toLowerCase();
+                            return (
+                              t.title?.toLowerCase().includes(q) ||
+                              t.description?.toLowerCase().includes(q) ||
+                              t.creatorName?.toLowerCase().includes(q) ||
+                              t.creatorId?.toLowerCase().includes(q) ||
+                              (t as any).creatorEmail?.toLowerCase().includes(q)
+                            );
+                          });
+
+                          if (filteredAdminTasks.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={9} className="p-8 text-center text-slate-500">
+                                  {taskSearch ? 'No bounty tasks match your search.' : 'No registered bounty tasks found.'}
+                                </td>
+                              </tr>
+                            );
+                          }
+
+                          return filteredAdminTasks.map((t) => {
+                            const isSuspended = t.status === 'suspended';
+                            const isToggling = togglingTaskId === t.id;
+                            const stats = submissionStatsMap[t.id] || { approved: 0, pending: 0, rejected: 0 };
+                            const pct = Math.round(((t.completedSpots || 0) / (t.totalSpots || 1)) * 100);
+
+                            return (
+                              <tr key={t.id} className="hover:bg-[#025BE5]/10 transition-colors">
+                                <td className="p-3 max-w-xs">
+                                  <div className="font-semibold text-white truncate" title={t.title}>
+                                    {t.title}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="px-1.5 py-0.5 rounded bg-[#011438] border border-[#025BE5]/30 text-[9px] uppercase font-bold text-[#029FFC]">
+                                      {t.category?.replace('_', ' ') || 'Task'}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500 font-mono">ID: {t.id.slice(0, 8)}...</span>
+                                  </div>
+                                </td>
+
+                                <td className="p-3">
+                                  <div className="font-semibold text-slate-200">{t.creatorName || 'Unknown Creator'}</div>
+                                  <div className="text-[10px] text-slate-400 font-mono">{(t as any).creatorEmail || t.creatorId?.slice(0, 10)}</div>
+                                </td>
+
+                                <td className="p-3 font-bold text-[#029FFC]">
+                                  ₦{(t.rewardPerUser || 0).toLocaleString()}
+                                </td>
+
+                                <td className="p-3 font-bold text-emerald-400">
+                                  {stats.approved}
+                                </td>
+
+                                <td className="p-3 font-bold text-amber-400">
+                                  {stats.pending}
+                                </td>
+
+                                <td className="p-3 font-bold text-red-400">
+                                  {stats.rejected}
+                                </td>
+
+                                <td className="p-3">
+                                  <div className="space-y-1">
+                                    <span className="font-semibold">{t.completedSpots || 0} / {t.totalSpots || 0}</span>
+                                    <div className="w-20 bg-[#011438] h-1.5 rounded-full overflow-hidden border border-[#025BE5]/20">
+                                      <div className="bg-gradient-to-r from-[#025BE5] to-[#029FFC] h-full" style={{ width: `${Math.min(pct, 100)}%` }} />
+                                    </div>
+                                  </div>
+                                </td>
+
+                                <td className="p-3">
+                                  <span
+                                    className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase border ${
+                                      isSuspended
+                                        ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                                        : t.status === 'completed'
+                                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                                        : t.status === 'paused'
+                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                        : 'bg-[#025BE5]/20 text-[#029FFC] border-[#025BE5]/30'
+                                    }`}
+                                  >
+                                    {isSuspended ? 'SUSPENDED' : t.status || 'ACTIVE'}
+                                  </span>
+                                </td>
+
+                                <td className="p-3">
+                                  {isSuspended ? (
+                                    <button
+                                      onClick={() => handleToggleTaskStatus(t.id, t.status)}
+                                      disabled={isToggling}
+                                      className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-bold border border-emerald-500/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                      <Eye className="w-3 h-3" />
+                                      {isToggling ? 'Activating...' : 'Activate Task'}
+                                    </button>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleTaskStatus(t.id, t.status)}
+                                      disabled={isToggling}
+                                      className="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 text-[10px] font-bold border border-red-500/30 transition-all flex items-center gap-1 disabled:opacity-50"
+                                    >
+                                      <EyeOff className="w-3 h-3" />
+                                      {isToggling ? 'Suspending...' : 'Suspend Task'}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>

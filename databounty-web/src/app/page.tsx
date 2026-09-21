@@ -160,7 +160,7 @@ export default function Home() {
             </Link>
           </div>
 
-          {tasks.length === 0 ? (
+          {tasks.filter((t) => t.status !== 'suspended').length === 0 ? (
             <div className="p-8 text-center glass-panel rounded-2xl border border-gray-800 space-y-2">
               <AlertCircle className="w-8 h-8 text-gray-500 mx-auto" />
               <h3 className="text-sm font-bold text-white">No Live Bounties Right Now</h3>
@@ -168,7 +168,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tasks.slice(0, 3).map((task) => (
+              {tasks.filter((t) => t.status !== 'suspended').slice(0, 3).map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
