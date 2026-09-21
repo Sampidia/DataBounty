@@ -11,11 +11,12 @@ import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
 import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle, Image as ImageIcon, Sparkles, CheckCircle2, Wallet } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
 export default function TasksPage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [tasks, setTasks] = useState<BountyTask[]>([]);
+  const [userSubmissions, setUserSubmissions] = useState<TaskSubmission[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<BountyTask | null>(null);
@@ -77,6 +78,37 @@ export default function TasksPage() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!user?.id) {
+      setUserSubmissions([]);
+      return;
+    }
+
+    const subsRef = collection(db, 'submissions');
+    const q = query(subsRef, where('userId', '==', user.id));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as TaskSubmission));
+          setUserSubmissions(loaded);
+        } else {
+          setUserSubmissions([]);
+        }
+      },
+      (err) => {
+        console.warn('[TasksPage] Submissions snapshot error:', err);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [user?.id]);
+
+  const submittedTaskIds = new Set(
+    userSubmissions.filter((s) => s.status !== 'rejected').map((s) => s.taskId)
+  );
+
   const hasSubmittedRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -129,15 +161,22 @@ export default function TasksPage() {
     return true;
   });
 
-  const handleOpenTask = (task: BountyTask) => {
+  const handleOpenTask = async (task: BountyTask) => {
     if (!isAuthenticated || !user) {
       alert('Authentication required: Please sign in or register to claim bounties.');
       openAuthModal('tester');
       return;
     }
 
+    if (submittedTaskIds.has(task.id)) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(`databounty_reservation_${user.id}_${task.id}`);
+      }
+      alert('You have already submitted proof for this bounty task.');
+      return;
+    }
+
     hasSubmittedRef.current = false;
-    setSelectedTask(task);
 
     // Check for existing active reservation in localStorage
     if (typeof window !== 'undefined' && user.id) {
@@ -148,6 +187,7 @@ export default function TasksPage() {
           const parsed = JSON.parse(raw);
           const rem = Math.max(0, Math.floor((parsed.expiresAt - Date.now()) / 1000));
           if (rem > 0) {
+            setSelectedTask(task);
             setTimerSeconds(rem);
             setIsTimerRunning(true);
             setSecretCode('');
@@ -169,11 +209,16 @@ export default function TasksPage() {
       return;
     }
 
-    setTimerSeconds(1800); // 30 minutes reservation timer
-    setIsTimerRunning(true);
-    setSecretCode('');
-    setProofUrl('');
-    reserveTaskSpotInFirestore(task.id, user.id);
+    try {
+      await reserveTaskSpotInFirestore(task.id, user.id);
+      setSelectedTask(task);
+      setTimerSeconds(1800); // 30 minutes reservation timer
+      setIsTimerRunning(true);
+      setSecretCode('');
+      setProofUrl('');
+    } catch (err: any) {
+      alert(`Reservation failed: ${err?.message || 'Unable to reserve spot.'}`);
+    }
   };
 
   const handleCloseTaskModal = (isSubmitted?: boolean | React.SyntheticEvent) => {
@@ -414,6 +459,7 @@ export default function TasksPage() {
                   userState={userState}
                   userGender={userGender}
                   userId={user?.id}
+                  hasSubmitted={submittedTaskIds.has(t.id)}
                 />
               ))}
             </div>

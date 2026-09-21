@@ -11,10 +11,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { taskId } = await request.json();
+    const { taskId, userId } = await request.json();
 
     if (!taskId) {
       return NextResponse.json({ error: 'Missing taskId' }, { status: 400 });
+    }
+
+    if (userId) {
+      const existingSubSnap = await adminDb
+        .collection('submissions')
+        .where('taskId', '==', taskId)
+        .where('userId', '==', userId)
+        .get();
+
+      const hasActiveSubmission = existingSubSnap.docs.some(
+        (doc) => doc.data().status !== 'rejected'
+      );
+
+      if (hasActiveSubmission) {
+        return NextResponse.json(
+          { error: 'You have already submitted proof for this task.' },
+          { status: 409 }
+        );
+      }
     }
 
     const taskRef = adminDb.collection('tasks').doc(taskId);

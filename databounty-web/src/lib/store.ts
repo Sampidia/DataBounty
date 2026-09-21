@@ -182,8 +182,9 @@ export async function reserveTaskSpotInFirestore(taskId: string, userId?: string
         expiresAt,
       }));
     }
-  } catch (err) {
+  } catch (err: any) {
     console.warn('[API] reserveTaskSpot error:', err);
+    throw err;
   }
 }
 

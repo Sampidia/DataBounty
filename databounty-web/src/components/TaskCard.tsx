@@ -8,9 +8,10 @@ interface TaskCardProps {
   userState?: string;
   userGender?: string;
   userId?: string;
+  hasSubmitted?: boolean;
 }
 
-export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female', userId }: TaskCardProps) {
+export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female', userId, hasSubmitted = false }: TaskCardProps) {
   const [activeReservationSecs, setActiveReservationSecs] = React.useState<number | null>(null);
 
   React.useEffect(() => {
@@ -21,7 +22,7 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
         try {
           const parsed = JSON.parse(raw);
           const rem = Math.max(0, Math.floor((parsed.expiresAt - Date.now()) / 1000));
-          if (rem > 0) {
+          if (rem > 0 && !hasSubmitted) {
             setActiveReservationSecs(rem);
           } else {
             localStorage.removeItem(key);
@@ -29,7 +30,7 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
         } catch (e) {}
       }
     }
-  }, [userId, task.id]);
+  }, [userId, task.id, hasSubmitted]);
 
   const takenSpots = task.completedSpots + (task.pendingSpots || 0) + (task.reservedSpots || 0);
   const percentage = Math.min(100, Math.round((task.completedSpots / task.totalSpots) * 100));
@@ -38,41 +39,50 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
   const pendingCount = task.pendingSpots || 0;
   const reservedCount = task.reservedSpots || 0;
   const isCapacityReached = takenSpots >= task.totalSpots;
-  const hasActiveReservation = activeReservationSecs !== null && activeReservationSecs > 0;
+  const hasActiveReservation = !hasSubmitted && activeReservationSecs !== null && activeReservationSecs > 0;
 
   // Eligibility check
   const isStateEligible = task.targetState === 'All' || task.targetState === userState;
   const isGenderEligible = task.targetGender === 'All' || task.targetGender === userGender;
   const isEligible = isStateEligible && isGenderEligible;
 
-  const isDisabled = !hasActiveReservation && (isFull || isCapacityReached || !isEligible);
+  const isDisabled = hasSubmitted || (!hasActiveReservation && (isFull || isCapacityReached || !isEligible));
 
   return (
-    <div className={`glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bg-[#031F51] border border-[#025BE5]/30 ${
-      !isEligible ? 'opacity-60' : ''
-    }`}>
+    <div className={`glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bg-[#031F51] border ${
+      hasSubmitted ? 'border-emerald-500/40 bg-[#022340]' : 'border-[#025BE5]/30'
+    } ${!isEligible && !hasSubmitted ? 'opacity-60' : ''}`}>
       
       {/* Category & Status Banner */}
       <div>
         <div className="flex items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#011438] border border-[#025BE5]/30 text-slate-300">
-            {task.category === 'google_form' && (
-              <>
-                <FileSpreadsheet className="w-3.5 h-3.5 text-[#029FFC]" />
-                <span>Google Form</span>
-              </>
-            )}
-            {task.category === 'app_test' && (
-              <>
-                <Smartphone className="w-3.5 h-3.5 text-[#029FFC]" />
-                <span>App Testing</span>
-              </>
-            )}
-            {task.category === 'web_bug' && (
-              <>
-                <Globe className="w-3.5 h-3.5 text-[#029FFC]" />
-                <span>Web Bug Test</span>
-              </>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#011438] border border-[#025BE5]/30 text-slate-300">
+              {task.category === 'google_form' && (
+                <>
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-[#029FFC]" />
+                  <span>Google Form</span>
+                </>
+              )}
+              {task.category === 'app_test' && (
+                <>
+                  <Smartphone className="w-3.5 h-3.5 text-[#029FFC]" />
+                  <span>App Testing</span>
+                </>
+              )}
+              {task.category === 'web_bug' && (
+                <>
+                  <Globe className="w-3.5 h-3.5 text-[#029FFC]" />
+                  <span>Web Bug Test</span>
+                </>
+              )}
+            </div>
+
+            {hasSubmitted && (
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Submitted
+              </span>
             )}
           </div>
 
@@ -164,7 +174,9 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
             onSelectTask(task);
           }}
           className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-            hasActiveReservation
+            hasSubmitted
+              ? 'bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 cursor-not-allowed'
+              : hasActiveReservation
               ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-[#029FFC] text-white shadow-lg shadow-amber-500/20 animate-pulse hover:scale-[1.01]'
               : isFull
               ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
@@ -175,7 +187,9 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
               : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white shadow-md hover:scale-[1.01]'
           }`}
         >
-          {hasActiveReservation ? (
+          {hasSubmitted ? (
+            'Already Completed ✓'
+          ) : hasActiveReservation ? (
             `Resume Bounty Task ⏱ (${Math.floor((activeReservationSecs || 0) / 60)}m ${(activeReservationSecs || 0) % 60}s)`
           ) : isFull ? (
             'Bounty Completed'
