@@ -322,7 +322,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const userRef = doc(db, 'users', user.id);
-      await updateDoc(userRef, updatedProps);
+      await setDoc(userRef, updatedProps, { merge: true });
     } catch (err) {
       console.warn('[AuthContext] Firestore user update fallback:', err);
     }

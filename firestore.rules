@@ -2,12 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: own profile read/write; walletBalance and escrowBalance are READ-ONLY from client
+    // Users: own profile read/write; walletBalance and escrowBalance cannot be altered by client updates
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId
-        && !('walletBalance' in request.resource.data)
-        && !('escrowBalance' in request.resource.data);
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['walletBalance', 'escrowBalance']);
     }
 
     // Tasks: public read access; logged-in users can create;

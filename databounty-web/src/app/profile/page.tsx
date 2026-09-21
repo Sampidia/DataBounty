@@ -154,9 +154,9 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateUser({
+    await updateUser({
       name,
       phone,
       devices,
@@ -302,7 +302,7 @@ export default function ProfilePage() {
                         <input
                           type="text"
                           readOnly
-                          value={gender}
+                          value={user?.gender || 'Male'}
                           className="w-full bg-[#011438]/50 border border-slate-700/50 rounded-xl px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed"
                         />
                         <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-500/30">
@@ -320,7 +320,7 @@ export default function ProfilePage() {
                         <input
                           type="text"
                           readOnly
-                          value={`${state} State`}
+                          value={`${user?.state || 'Lagos'} State`}
                           className="w-full bg-[#011438]/50 border border-slate-700/50 rounded-xl px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed"
                         />
                         <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-500/30">
