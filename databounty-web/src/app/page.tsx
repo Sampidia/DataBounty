@@ -68,6 +68,29 @@ export default function Home() {
     setTasks([newTask, ...tasks]);
   };
 
+  // Filter uncompleted active tasks with open spots, sorted by MOST available spots first
+  const featuredBounties = React.useMemo(() => {
+    return tasks
+      .filter((t) => {
+        if (t.status === 'suspended' || t.status === 'completed') return false;
+        const takenSpots = t.completedSpots + (t.pendingSpots || 0) + (t.reservedSpots || 0);
+        const availableSpots = t.totalSpots - takenSpots;
+        return availableSpots > 0 && t.completedSpots < t.totalSpots;
+      })
+      .sort((a, b) => {
+        const takenA = a.completedSpots + (a.pendingSpots || 0) + (a.reservedSpots || 0);
+        const availA = a.totalSpots - takenA;
+
+        const takenB = b.completedSpots + (b.pendingSpots || 0) + (b.reservedSpots || 0);
+        const availB = b.totalSpots - takenB;
+
+        if (availB !== availA) {
+          return availB - availA; // Most available spots first
+        }
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }, [tasks]);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f17]">
       <Navbar
@@ -180,7 +203,7 @@ export default function Home() {
             </Link>
           </div>
 
-          {tasks.filter((t) => t.status !== 'suspended').length === 0 ? (
+          {featuredBounties.length === 0 ? (
             <div className="p-8 text-center glass-panel rounded-2xl border border-gray-800 space-y-2">
               <AlertCircle className="w-8 h-8 text-gray-500 mx-auto" />
               <h3 className="text-sm font-bold text-white">No Live Bounties Right Now</h3>
@@ -188,7 +211,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tasks.filter((t) => t.status !== 'suspended').slice(0, 3).map((task) => (
+              {featuredBounties.slice(0, 3).map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
