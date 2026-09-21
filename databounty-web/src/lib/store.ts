@@ -153,6 +153,10 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
         console.warn('[Task Submit Spots API Call Warning]', spotErr);
       }
     }
+
+    if (typeof window !== 'undefined' && submission.userId && submission.taskId) {
+      localStorage.removeItem(`databounty_reservation_${submission.userId}_${submission.taskId}`);
+    }
   } catch (err: any) {
     console.error('[Firestore] submitTaskProofToFirestore FAILED:', err);
     throw new Error(err?.message || 'Failed to submit proof. Please try again.');

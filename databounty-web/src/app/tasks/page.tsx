@@ -180,7 +180,11 @@ export default function TasksPage() {
     const didSubmit = isSubmitted === true || hasSubmittedRef.current;
     if (selectedTask?.id && user?.id) {
       if (didSubmit) {
-        releaseTaskSpotInFirestore(selectedTask.id, user.id);
+        // Clear client reservation key upon submission without calling release API,
+        // because submitTaskProofToFirestore (/api/tasks/submit-spots) already decrements reservedSpots in Firestore.
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`databounty_reservation_${user.id}_${selectedTask.id}`);
+        }
       } else if (timerSeconds <= 0) {
         releaseTaskSpotInFirestore(selectedTask.id, user.id);
       }
