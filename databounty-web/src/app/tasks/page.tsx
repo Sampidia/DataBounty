@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import TaskCard from '@/components/TaskCard';
@@ -77,6 +77,8 @@ export default function TasksPage() {
     return () => unsubscribe();
   }, []);
 
+  const hasSubmittedRef = useRef<boolean>(false);
+
   useEffect(() => {
     let timer: any;
     if (isTimerRunning && timerSeconds > 0) {
@@ -85,7 +87,7 @@ export default function TasksPage() {
       }, 1000);
     } else if (timerSeconds === 0) {
       setIsTimerRunning(false);
-      if (selectedTask?.id) {
+      if (selectedTask?.id && !hasSubmittedRef.current) {
         releaseTaskSpotInFirestore(selectedTask.id);
       }
     }
@@ -141,6 +143,7 @@ export default function TasksPage() {
       return;
     }
 
+    hasSubmittedRef.current = false;
     setSelectedTask(task);
     setTimerSeconds(1800); // 30 minutes reservation timer
     setIsTimerRunning(true);
@@ -150,7 +153,7 @@ export default function TasksPage() {
   };
 
   const handleCloseTaskModal = (isSubmitted?: boolean | React.SyntheticEvent) => {
-    const didSubmit = isSubmitted === true;
+    const didSubmit = isSubmitted === true || hasSubmittedRef.current;
     if (selectedTask?.id && timerSeconds > 0 && !didSubmit) {
       releaseTaskSpotInFirestore(selectedTask.id);
     }
@@ -190,6 +193,7 @@ export default function TasksPage() {
     }
 
     setIsSubmitting(true);
+    hasSubmittedRef.current = true;
 
     try {
       const isOption1Task = selectedTask.category === 'google_form' && 

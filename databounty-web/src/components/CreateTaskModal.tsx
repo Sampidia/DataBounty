@@ -88,9 +88,13 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
     return cleanUrl.startsWith('https://docs.google.com/forms/') || cleanUrl.startsWith('https://forms.gle/');
   };
 
-  const saveAndPublishTask = async (newTask: BountyTask, isPaidFromWallet: boolean = false) => {
+  const saveAndPublishTask = async (
+    newTask: BountyTask,
+    isPaidFromWallet: boolean = false,
+    walletDebitAmount?: number
+  ) => {
     try {
-      await createFirestoreTask(newTask, isPaidFromWallet);
+      await createFirestoreTask(newTask, isPaidFromWallet, walletDebitAmount);
       onTaskCreated(newTask);
       setIsPublishSuccess(true);
       setTimeout(() => {
@@ -167,7 +171,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
         return;
       }
       await updateUser({ walletBalance: userWalletBalance - totalDepositRequired });
-      await saveAndPublishTask(newTask, true);
+      await saveAndPublishTask(newTask, true, totalDepositRequired);
     } else if (paymentOption === 'flutterwave' || paymentOption === 'split') {
       const flwAmount = paymentOption === 'split' ? remainingFlutterwaveAmount : totalDepositRequired;
 
@@ -205,7 +209,7 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                 if (paymentOption === 'split' && walletDebitAmount > 0) {
                   await updateUser({ walletBalance: userWalletBalance - walletDebitAmount });
                 }
-                await saveAndPublishTask(newTask);
+                await saveAndPublishTask(newTask, paymentOption === 'split', paymentOption === 'split' ? walletDebitAmount : 0);
               } else {
                 alert(`Escrow payment verification failed: ${verifyData.error || 'Unverified'}`);
                 setIsPublishSuccess(false);

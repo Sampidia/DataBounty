@@ -83,21 +83,29 @@ export async function fetchTasksFromFirestore(): Promise<BountyTask[]> {
   return [];
 }
 
-export async function createFirestoreTask(task: BountyTask, isPaidFromWallet: boolean = false): Promise<void> {
+export async function createFirestoreTask(
+  task: BountyTask,
+  isPaidFromWallet: boolean = false,
+  walletDebitAmount?: number
+): Promise<void> {
   try {
     const cleanTask = sanitizeForFirestore(task);
-    const taskRef = doc(db, 'tasks', task.id);
-    await setDoc(taskRef, cleanTask);
+    const idToken = await auth.currentUser?.getIdToken();
 
-    if (task.creatorId) {
-      const userRef = doc(db, 'users', task.creatorId);
-      const updates: Record<string, any> = {
-        escrowBalance: increment(task.totalBudget)
-      };
-      if (isPaidFromWallet) {
-        updates.walletBalance = increment(-task.totalBudget);
-      }
-      await updateDoc(userRef, updates);
+    const res = await fetch('/api/tasks/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task: cleanTask,
+        isPaidFromWallet,
+        walletDebitAmount,
+        idToken,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || 'Failed to publish task to database.');
     }
   } catch (err: any) {
     console.error('[Firestore] createFirestoreTask FAILED:', err);
