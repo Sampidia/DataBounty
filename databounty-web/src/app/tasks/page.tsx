@@ -11,7 +11,7 @@ import { TaskSubmission, NIGERIAN_STATES, BountyTask } from '@/lib/types';
 import { Search, MapPin, Users, Clock, FileSpreadsheet, Smartphone, Globe, ExternalLink, X, Upload, AlertCircle, Image as ImageIcon, Sparkles, CheckCircle2, Wallet } from 'lucide-react';
 
 import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function TasksPage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
@@ -214,12 +214,8 @@ export default function TasksPage() {
       };
 
       await submitTaskProofToFirestore(newSubmission);
-
-      // Increment completed spots count
-      const updatedTasks = tasks.map((t) =>
-        t.id === selectedTask.id ? { ...t, completedSpots: t.completedSpots + 1 } : t
-      );
-      setTasks(updatedTasks);
+      // Note: onSnapshot listener will automatically update task spots in real-time
+      // (pendingSpots is incremented server-side in submitTaskProofToFirestore)
 
       alert(
         isOption1Task
