@@ -6,7 +6,7 @@ Github: https://github.com/Sampidia/DataBounty.git
 
 step 1: git init
 step 2: git add .
-step 3: git commit -am  "Initial Version 0.2.16"
+step 3: git commit -am  "Initial Version 0.2.17"
 step 4: git remote add origin https://github.com/Sampidia/DataBounty.git
 step 5: git push origin master
 

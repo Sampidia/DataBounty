@@ -6,6 +6,49 @@ export type SubmissionStatus = 'pending' | 'pending_verification' | 'approved' |
 
 export type WithdrawalStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'REJECTED';
 
+// ─── Device Specification Types ────────────────────────────────────────────
+export type DeviceType = 'Android' | 'iPhone' | 'PC' | 'Tablet';
+
+export interface DeviceSpec {
+  id: string;         // uuid / nanoid for list key
+  deviceType: DeviceType;
+  deviceBrand: string;
+  osVersion: string;
+}
+
+export const POPULAR_OS_VERSIONS: Record<DeviceType, string[]> = {
+  Android: [
+    'Android 17',
+    'Android 16',
+    'Android 15',
+    'Android 14',
+    'Android 13',
+    'Android 12 & Below',
+  ],
+  iPhone: [
+    'iOS 18',
+    'iOS 17',
+    'iOS 16',
+    'iOS 15 & Below',
+  ],
+  PC: [
+    'Windows 11',
+    'Windows 10',
+    'macOS Sequoia',
+    'macOS Sonoma',
+    'Linux',
+  ],
+  Tablet: [
+    'iPadOS 18',
+    'iPadOS 17',
+    'Android Tablet 17',
+    'Android Tablet 16',
+    'Android Tablet 15',
+    'Android Tablet 14',
+    'Other',
+  ],
+};
+
 export const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", 
   "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", 
@@ -24,9 +67,12 @@ export interface UserProfile {
   gender: 'Male' | 'Female';
   country: 'Nigeria';
   state: NigerianState | string;
-  deviceBrand: string;
-  deviceModel: string;
-  osVersion: string;
+  // Multi-device specification (replaces flat deviceBrand/deviceModel/osVersion)
+  devices?: DeviceSpec[];
+  // Legacy flat device fields (kept for backward-compat, prefer `devices`)
+  deviceBrand?: string;
+  deviceModel?: string;
+  osVersion?: string;
   bankName: string;
   accountNumber: string;
   accountName: string;

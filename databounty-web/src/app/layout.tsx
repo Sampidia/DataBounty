@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/AuthContext";
 import { AuthModal } from "@/components/AuthModal";
+import { TesterOnboardingModal } from "@/components/TesterOnboardingModal";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-plus-jakarta",
@@ -65,6 +66,7 @@ export default function RootLayout({
           <Script src="https://checkout.flutterwave.com/v3.js" strategy="afterInteractive" />
           {children}
           <AuthModal />
+          <TesterOnboardingModal />
         </AuthProvider>
       </body>
     </html>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile, UserRole } from './types';
+import { UserProfile, UserRole, DeviceSpec } from './types';
 import { auth, db } from './firebase';
 import { 
   signInWithEmailAndPassword, 
@@ -19,13 +19,22 @@ interface AuthContextType {
   isAdminAuthenticated: boolean;
   isAuthModalOpen: boolean;
   authModalRole: UserRole;
+  needsTesterOnboarding: boolean;
   login: (email: string, pass: string, role?: UserRole) => Promise<void>;
-  signup: (email: string, pass: string, role: UserRole, name: string) => Promise<void>;
+  signup: (
+    email: string,
+    pass: string,
+    role: UserRole,
+    name: string,
+    demographics?: { gender: 'Male' | 'Female'; state: string; phone: string },
+    devices?: DeviceSpec[]
+  ) => Promise<void>;
   logout: () => Promise<void>;
   openAuthModal: (defaultRole?: UserRole) => void;
   closeAuthModal: () => void;
   updateUser: (updatedUser: Partial<UserProfile>) => Promise<void>;
   setAdminAuthenticated: (val: boolean) => void;
+  setNeedsTesterOnboarding: (val: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalRole, setAuthModalRole] = useState<UserRole>('tester');
+  const [needsTesterOnboarding, setNeedsTesterOnboarding] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Load auth state from Firebase & localStorage fallback
@@ -124,6 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (targetRole && targetRole !== 'admin' && profile.role !== targetRole) {
+          // If switching creator → tester, flag onboarding if no devices set
+          if (targetRole === 'tester' && (!profile.devices || profile.devices.length === 0)) {
+            setNeedsTesterOnboarding(true);
+          }
           profile.role = targetRole;
           await updateDoc(userDocRef, { role: targetRole });
         }
@@ -190,9 +204,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (email: string, pass: string, userRole: UserRole, name: string) => {
+  const signup = async (
+    email: string,
+    pass: string,
+    userRole: UserRole,
+    name: string,
+    demographics?: { gender: 'Male' | 'Female'; state: string; phone: string },
+    devices?: DeviceSpec[]
+  ) => {
     // Admin signup via public form is strictly forbidden
     const safeRole: UserRole = userRole === 'admin' ? 'tester' : userRole;
+
+    const gender = demographics?.gender ?? 'Female';
+    const state = demographics?.state ?? 'Lagos';
+    const phone = demographics?.phone ?? '+2348000000000';
 
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
@@ -200,13 +225,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: cred.user.uid,
         name: name || email.split('@')[0],
         email: email,
-        phone: '+2348000000000',
-        gender: 'Female',
+        phone,
+        gender,
         country: 'Nigeria',
-        state: 'Lagos',
-        deviceBrand: 'Mobile',
-        deviceModel: 'Smartphone',
-        osVersion: 'Android 14',
+        state,
+        devices: devices ?? [],
         bankName: '',
         accountNumber: '',
         accountName: (name || email.split('@')[0]).toUpperCase(),
@@ -236,13 +259,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: `usr_${Date.now()}`,
         name: name || email.split('@')[0],
         email: email,
-        phone: '+2348000000000',
-        gender: 'Female',
+        phone,
+        gender,
         country: 'Nigeria',
-        state: 'Lagos',
-        deviceBrand: 'Mobile',
-        deviceModel: 'Smartphone',
-        osVersion: 'Android 14',
+        state,
+        devices: devices ?? [],
         bankName: '',
         accountNumber: '',
         accountName: (name || email.split('@')[0]).toUpperCase(),
@@ -318,6 +339,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdminAuthenticated,
         isAuthModalOpen,
         authModalRole,
+        needsTesterOnboarding,
         login,
         signup,
         logout,
@@ -325,6 +347,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         closeAuthModal,
         updateUser,
         setAdminAuthenticated,
+        setNeedsTesterOnboarding,
       }}
     >
       {children}

@@ -6,11 +6,22 @@ import Footer from '@/components/Footer';
 import WithdrawModal from '@/components/WithdrawModal';
 import { useAuth } from '@/lib/AuthContext';
 import { INITIAL_TRANSACTIONS } from '@/lib/store';
-import { NIGERIAN_STATES, Transaction } from '@/lib/types';
+import { NIGERIAN_STATES, Transaction, DeviceSpec, DeviceType, POPULAR_OS_VERSIONS } from '@/lib/types';
 import { POPULAR_NIGERIAN_BANKS } from '@/lib/banks';
 import { db } from '@/lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
-import { User, Wallet, ShieldCheck, CheckCircle2, Save, ArrowDownRight, ArrowUpRight, Smartphone, LogIn, Lock, CreditCard, RefreshCw } from 'lucide-react';
+import { User, Wallet, ShieldCheck, CheckCircle2, Save, ArrowDownRight, ArrowUpRight, Smartphone, LogIn, Lock, CreditCard, RefreshCw, Plus, Trash2 } from 'lucide-react';
+
+const DEVICE_TYPES: DeviceType[] = ['Android', 'iPhone', 'PC', 'Tablet'];
+
+function emptyDevice(): DeviceSpec {
+  return {
+    id: `dev_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    deviceType: 'Android',
+    deviceBrand: '',
+    osVersion: POPULAR_OS_VERSIONS.Android[0],
+  };
+}
 
 export default function ProfilePage() {
   const { user, isAuthenticated, openAuthModal, updateUser } = useAuth();
@@ -22,11 +33,13 @@ export default function ProfilePage() {
   // Profile Form State
   const [name, setName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
-  const [gender, setGender] = useState<'Male' | 'Female'>(user?.gender || 'Male');
-  const [state, setState] = useState(user?.state || 'Lagos');
-  const [deviceBrand, setDeviceBrand] = useState(user?.deviceBrand || 'Tecno');
-  const [deviceModel, setDeviceModel] = useState(user?.deviceModel || 'Camon 20');
-  const [osVersion, setOsVersion] = useState(user?.osVersion || 'Android 13');
+  const [gender] = useState<'Male' | 'Female'>(user?.gender || 'Male');
+  const [state] = useState(user?.state || 'Lagos');
+
+  // Multi-Device Specs State
+  const [devices, setDevices] = useState<DeviceSpec[]>(
+    user?.devices && user.devices.length > 0 ? user.devices : [emptyDevice()]
+  );
 
   // Bank / Payment Form State
   const [bankName, setBankName] = useState(user?.bankName || 'Opay');
@@ -39,11 +52,9 @@ export default function ProfilePage() {
     if (user) {
       setName(user.name);
       setPhone(user.phone);
-      setGender(user.gender);
-      setState(user.state);
-      setDeviceBrand(user.deviceBrand);
-      setDeviceModel(user.deviceModel);
-      setOsVersion(user.osVersion);
+      if (user.devices && user.devices.length > 0) {
+        setDevices(user.devices);
+      }
       setBankName(user.bankName || 'Opay');
       setAccountNumber(user.accountNumber || '');
       setAccountName(user.accountName || '');
@@ -148,11 +159,7 @@ export default function ProfilePage() {
     updateUser({
       name,
       phone,
-      gender,
-      state,
-      deviceBrand,
-      deviceModel,
-      osVersion,
+      devices,
       bankName,
       accountNumber,
       accountName,
@@ -160,6 +167,13 @@ export default function ProfilePage() {
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2000);
   };
+
+  const updateDevice = (index: number, updated: DeviceSpec) => {
+    setDevices((prev) => prev.map((d, i) => (i === index ? updated : d)));
+  };
+
+  const addDevice = () => setDevices((prev) => [...prev, emptyDevice()]);
+  const removeDevice = (index: number) => setDevices((prev) => prev.filter((_, i) => i !== index));
 
   return (
     <div className="min-h-screen flex flex-col bg-[#011438]">
@@ -254,7 +268,7 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <form onSubmit={handleSaveProfile} className="space-y-4">
+                <form onSubmit={handleSaveProfile} className="space-y-5">
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -279,71 +293,138 @@ export default function ProfilePage() {
                       />
                     </div>
 
+                    {/* Gender (Uneditable) */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">Gender</label>
-                      <select
-                        value={gender}
-                        onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
-                        className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#029FFC]"
-                      >
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                      </select>
+                      <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
+                        Gender <Lock className="w-3 h-3 text-amber-400" />
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          readOnly
+                          value={gender}
+                          className="w-full bg-[#011438]/50 border border-slate-700/50 rounded-xl px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed"
+                        />
+                        <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-500/30">
+                          Locked
+                        </span>
+                      </div>
                     </div>
 
+                    {/* State (Uneditable) */}
                     <div>
-                      <label className="block text-xs font-medium text-slate-300 mb-1">
-                        State of Residency Target (36 States + FCT)
+                      <label className="block text-xs font-medium text-slate-300 mb-1 flex items-center gap-1">
+                        State of Residency <Lock className="w-3 h-3 text-amber-400" />
                       </label>
-                      <select
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-[#029FFC]"
-                      >
-                        {NIGERIAN_STATES.map((s) => (
-                          <option key={s} value={s}>
-                            {s} State
-                          </option>
-                        ))}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          readOnly
+                          value={`${state} State`}
+                          className="w-full bg-[#011438]/50 border border-slate-700/50 rounded-xl px-3.5 py-2 text-xs text-slate-400 cursor-not-allowed"
+                        />
+                        <span className="absolute right-3 top-2.5 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded font-bold border border-amber-500/30">
+                          Locked
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Device Spec Section */}
-                  <div className="pt-3 border-t border-[#025BE5]/20 space-y-3">
-                    <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                      <Smartphone className="w-4 h-4 text-[#029FFC]" />
-                      Captured Testing Device Specifications
-                    </h4>
+                  {/* Multi-Device Specification Management */}
+                  <div className="pt-4 border-t border-[#025BE5]/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                        <Smartphone className="w-4 h-4 text-[#029FFC]" />
+                        Captured Testing Device Specifications ({devices.length})
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={addDevice}
+                        disabled={devices.length >= 5}
+                        className="flex items-center gap-1 text-[11px] text-[#029FFC] font-semibold hover:text-white transition-colors disabled:opacity-40"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Device
+                      </button>
+                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Device Brand</label>
-                        <input
-                          type="text"
-                          value={deviceBrand}
-                          onChange={(e) => setDeviceBrand(e.target.value)}
-                          className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Device Model</label>
-                        <input
-                          type="text"
-                          value={deviceModel}
-                          onChange={(e) => setDeviceModel(e.target.value)}
-                          className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] text-slate-400 mb-1">Android OS Version</label>
-                        <input
-                          type="text"
-                          value={osVersion}
-                          onChange={(e) => setOsVersion(e.target.value)}
-                          className="w-full bg-[#011438] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
-                        />
-                      </div>
+                    <div className="space-y-3">
+                      {devices.map((dev, i) => (
+                        <div key={dev.id || i} className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl space-y-3">
+                          {/* Device Type Radio Buttons */}
+                          <div>
+                            <label className="block text-[10px] text-slate-400 mb-1">Device Type</label>
+                            <div className="flex flex-wrap gap-2">
+                              {DEVICE_TYPES.map((dt) => (
+                                <button
+                                  key={dt}
+                                  type="button"
+                                  onClick={() =>
+                                    updateDevice(i, {
+                                      ...dev,
+                                      deviceType: dt,
+                                      osVersion: POPULAR_OS_VERSIONS[dt][0],
+                                    })
+                                  }
+                                  className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
+                                    dev.deviceType === dt
+                                      ? 'bg-[#025BE5] border-[#025BE5] text-white shadow-sm'
+                                      : 'bg-transparent border-[#025BE5]/30 text-slate-400 hover:text-white hover:border-[#025BE5]/60'
+                                  }`}
+                                >
+                                  {dt === 'Android' ? '🤖' : dt === 'iPhone' ? '🍎' : dt === 'PC' ? '🖥' : '📱'} {dt}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {/* Device Brand */}
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-1">Device Brand</label>
+                              <input
+                                type="text"
+                                required
+                                value={dev.deviceBrand}
+                                onChange={(e) => updateDevice(i, { ...dev, deviceBrand: e.target.value })}
+                                placeholder={
+                                  dev.deviceType === 'Android' ? 'e.g. Tecno, Samsung, Xiaomi' :
+                                  dev.deviceType === 'iPhone' ? 'Apple' :
+                                  dev.deviceType === 'PC' ? 'e.g. Dell, HP, Apple' : 'e.g. Apple, Samsung'
+                                }
+                                className="w-full bg-[#020e2e] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                              />
+                            </div>
+
+                            {/* OS Version Dropdown */}
+                            <div>
+                              <label className="block text-[10px] text-slate-400 mb-1">OS Version</label>
+                              <select
+                                value={dev.osVersion}
+                                onChange={(e) => updateDevice(i, { ...dev, osVersion: e.target.value })}
+                                className="w-full bg-[#020e2e] border border-[#025BE5]/30 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                              >
+                                {POPULAR_OS_VERSIONS[dev.deviceType].map((os) => (
+                                  <option key={os} value={os}>
+                                    {os}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          {devices.length > 1 && (
+                            <div className="flex justify-end">
+                              <button
+                                type="button"
+                                onClick={() => removeDevice(i)}
+                                className="flex items-center gap-1 text-[11px] text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Remove Device
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
 
