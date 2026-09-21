@@ -10,11 +10,12 @@ interface TaskCardProps {
 }
 
 export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female' }: TaskCardProps) {
+  const takenSpots = task.completedSpots + (task.pendingSpots || 0) + (task.reservedSpots || 0);
   const percentage = Math.min(100, Math.round((task.completedSpots / task.totalSpots) * 100));
+  const takenPercentage = Math.min(100, Math.round((takenSpots / task.totalSpots) * 100));
   const isFull = task.completedSpots >= task.totalSpots;
   const pendingCount = task.pendingSpots || 0;
   const reservedCount = task.reservedSpots || 0;
-  const takenSpots = task.completedSpots + pendingCount + reservedCount;
   const isCapacityReached = takenSpots >= task.totalSpots;
 
   // Eligibility check
@@ -105,14 +106,23 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
               )}
             </div>
           </div>
+          {/* Progress bar: shows takenSpots (completed + pending + reserved) */}
           <div className="w-full bg-[#011438] h-2 rounded-full overflow-hidden border border-[#025BE5]/20">
+            {/* Completed portion */}
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                isFull ? 'bg-slate-600' : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC]'
-              }`}
+              className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC]"
               style={{ width: `${percentage}%` }}
             />
           </div>
+          {/* Secondary bar for pending+reserved overlay */}
+          {(pendingCount > 0 || reservedCount > 0) && (
+            <div className="w-full bg-[#011438] h-1 rounded-full overflow-hidden border border-amber-500/20 -mt-1 opacity-60">
+              <div
+                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-amber-500 to-amber-400"
+                style={{ width: `${takenPercentage}%` }}
+              />
+            </div>
+          )}
         </div>
 
         <button

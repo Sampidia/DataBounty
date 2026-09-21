@@ -181,23 +181,33 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
 
 export async function reserveTaskSpotInFirestore(taskId: string): Promise<void> {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
-    await updateDoc(taskRef, {
-      reservedSpots: increment(1)
+    const res = await fetch('/api/tasks/reserve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId }),
     });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Reserve failed');
+    }
   } catch (err) {
-    console.warn('[Firestore] reserveTaskSpot error:', err);
+    console.warn('[API] reserveTaskSpot error:', err);
   }
 }
 
 export async function releaseTaskSpotInFirestore(taskId: string): Promise<void> {
   try {
-    const taskRef = doc(db, 'tasks', taskId);
-    await updateDoc(taskRef, {
-      reservedSpots: increment(-1)
+    const res = await fetch('/api/tasks/release', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ taskId }),
     });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Release failed');
+    }
   } catch (err) {
-    console.warn('[Firestore] releaseTaskSpot error:', err);
+    console.warn('[API] releaseTaskSpot error:', err);
   }
 }
 

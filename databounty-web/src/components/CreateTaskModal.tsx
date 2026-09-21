@@ -135,6 +135,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       rewardPerUser,
       totalSpots,
       completedSpots: 0,
+      pendingSpots: 0,
+      reservedSpots: 0,
       status: 'active',
       testInstructions: testInstructions || 'Follow campaign guidelines carefully.',
       targetCountry,
