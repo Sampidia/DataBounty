@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserProfile, WithdrawalRequest, calculateWithdrawalFee } from '@/lib/types';
+import { UserProfile, WithdrawalRequest, calculateWithdrawalFee, MIN_WITHDRAWAL_AMOUNT } from '@/lib/types';
 import { DEFAULT_BANK, POPULAR_NIGERIAN_BANKS, BankInfo, searchBanks, findBankByTag } from '@/lib/banks';
 import {
   X, Wallet, ShieldAlert, CheckCircle2, ArrowRight, Building2, Search,
@@ -109,8 +109,8 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
     e.preventDefault();
     if (isSubmitting) return;
 
-    if (amount < 100) {
-      setErrorMsg('Minimum withdrawal threshold is ₦100 Naira.');
+    if (amount < MIN_WITHDRAWAL_AMOUNT) {
+      setErrorMsg(`Minimum withdrawal amount is ₦${MIN_WITHDRAWAL_AMOUNT} (₦100 net payout + ₦50 fee).`);
       return;
     }
     if (amount > user.walletBalance) {
@@ -195,7 +195,7 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
                   type="button"
                   onClick={() => {
                     setShowInsufficientFundsPopup(false);
-                    setAmount(Math.max(100, user.walletBalance));
+                    setAmount(Math.max(MIN_WITHDRAWAL_AMOUNT, user.walletBalance));
                   }}
                   className="flex-1 py-2.5 px-4 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-[#025BE5]/30"
                 >
@@ -248,13 +248,13 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="text-xs font-semibold text-slate-200">Withdrawal Amount (₦ NGN)</label>
-                <span className="text-[11px] text-amber-400 font-medium">Min Threshold: ₦100</span>
+                <span className="text-[11px] text-amber-400 font-medium">Min Threshold: ₦{MIN_WITHDRAWAL_AMOUNT} (₦100 net + ₦50 fee)</span>
               </div>
               <div className="relative flex items-center">
                 <span className="absolute left-3.5 text-slate-400 font-bold">₦</span>
                 <input
                   type="number"
-                  min={100}
+                  min={MIN_WITHDRAWAL_AMOUNT}
                   max={user.walletBalance}
                   step={50}
                   value={amount}

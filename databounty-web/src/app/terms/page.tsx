@@ -62,7 +62,7 @@ export default function TermsPage() {
               <li>Testers must complete tasks authentically without using bots, VPNs, or automated scripts.</li>
               <li>Duplicate submissions for the same campaign by the same user account are strictly prohibited.</li>
               <li>Rewards earned are credited to the tester&apos;s wallet balance upon verification approval.</li>
-              <li>Withdrawals to Nigerian NUBAN bank accounts require a minimum threshold of ₦100 Naira. A flat withdrawal processing fee applies (₦50 under ₦10,000; ₦100 above ₦10,000).</li>
+              <li>Withdrawals to Nigerian NUBAN bank accounts require a minimum gross withdrawal of ₦150 (₦100 minimum net payout to tester + ₦50 processing fee). A flat withdrawal processing fee applies (₦50 under ₦10,000; ₦100 above ₦10,000).</li>
             </ul>
           </section>
 

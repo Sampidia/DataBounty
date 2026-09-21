@@ -234,7 +234,7 @@ export default function ProfilePage() {
                 <div className="pt-2 border-t border-[#025BE5]/20 space-y-2 text-xs text-slate-300">
                   <div className="flex justify-between">
                     <span>Minimum Cashout Threshold:</span>
-                    <strong className="text-[#029FFC]">₦100</strong>
+                    <strong className="text-[#029FFC]">₦150</strong>
                   </div>
                   <div className="flex justify-between">
                     <span>Withdrawal Fee Tier (&lt;₦10k):</span>

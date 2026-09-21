@@ -307,7 +307,7 @@ export default function TasksPage() {
               Explore Available Micro-Task Bounties
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 mt-1">
-              Tasks filtered according to your profile demographics. Minimum cashout threshold is ₦100.
+              Tasks filtered according to your profile demographics. Minimum cashout threshold is ₦150 (₦100 net + ₦50 fee).
             </p>
           </div>
         </div>

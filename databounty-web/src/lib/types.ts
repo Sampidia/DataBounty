@@ -171,6 +171,9 @@ export function calculateCreatorFee(totalBudget: number): number {
   return 500;
 }
 
+/** Minimum gross withdrawal amount (includes ₦50 fee → ₦100 net min payout to tester) */
+export const MIN_WITHDRAWAL_AMOUNT = 150;
+
 export function calculateWithdrawalFee(amount: number): number {
   if (amount < 10000) return 50;
   return 100;

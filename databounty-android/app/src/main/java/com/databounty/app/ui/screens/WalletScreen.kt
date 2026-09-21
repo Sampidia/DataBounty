@@ -84,14 +84,14 @@ fun WalletScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Min Threshold: ₦100", fontSize = 11.sp, color = Color.LightGray)
+                        Text("Min Threshold: ₦150 (₦100 net + ₦50 fee)", fontSize = 11.sp, color = Color.LightGray)
                         Text("Instant Payout PENDING Queue", fontSize = 11.sp, color = TealAccent)
                     }
 
                     Button(
                         onClick = {
-                            if (user.walletBalance < 100) {
-                                attemptedAmount = 100
+                        if (user.walletBalance < 150) {
+                                attemptedAmount = 150
                                 showInsufficientBalanceDialog = true
                             } else {
                                 showWithdrawDialog = true
@@ -126,7 +126,7 @@ fun WalletScreen(
                         color = Color.White
                     )
                     Text(
-                        text = "• Cashout ₦100 – ₦9,999: ₦50 Fee Tier\n• Cashout ₦10,000+: ₦100 Fee Tier",
+                        text = "• Cashout ₦150 – ₦9,999: ₦50 Fee Tier\n• Cashout ₦10,000+: ₦100 Fee Tier",
                         fontSize = 11.sp,
                         color = Color.LightGray
                     )
@@ -373,8 +373,8 @@ fun WithdrawalDialog(
         },
         confirmButton = {
             Button(
-                onClick = { if (amount >= 100 && !isInvalidDetails) onConfirm(amount, selectedBank) },
-                enabled = amount >= 100 && !isInvalidDetails,
+                onClick = { if (amount >= 150 && !isInvalidDetails) onConfirm(amount, selectedBank) },
+                enabled = amount >= 150 && !isInvalidDetails,
                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
             ) {
                 Text("Confirm Payout", color = Color.Black, fontWeight = FontWeight.Bold)

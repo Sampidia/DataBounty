@@ -15,8 +15,8 @@ export async function POST(request: Request) {
     const wd = body.withdrawal || body;
     const idToken = body.idToken;
 
-    if (!wd.userId || !wd.amount || wd.amount < 100) {
-      return NextResponse.json({ error: 'Invalid withdrawal parameters' }, { status: 400 });
+    if (!wd.userId || !wd.amount || wd.amount < 150) {
+      return NextResponse.json({ error: 'Minimum withdrawal amount is ₦150 (₦100 net + ₦50 fee)' }, { status: 400 });
     }
 
     // Verify ownership via ID Token

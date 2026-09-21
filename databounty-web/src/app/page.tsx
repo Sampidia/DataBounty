@@ -119,7 +119,7 @@ export default function Home() {
             </h1>
 
             <p className="text-base sm:text-lg text-gray-300 leading-relaxed font-normal">
-              Publish Google Forms, Mobile Apps, & Web Bug bounties. Creators reach targeted demographics across 36 Nigerian States while testers earn rewards starting at <strong className="text-emerald-400">₦100 minimum payout</strong>.
+              Publish Google Forms, Mobile Apps, &amp; Web Bug bounties. Creators reach targeted demographics across 36 Nigerian States while testers earn rewards starting at <strong className="text-emerald-400">₦150 minimum payout (₦100 net + ₦50 fee)</strong>.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
@@ -180,7 +180,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-lg font-bold text-white">Instant Verification & Cashout</h3>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Option 1 Google Forms pay out automatically via Google Sheet Webhooks. Cash out rewards to any Nigerian bank once balance hits ₦100.
+                  Option 1 Google Forms pay out automatically via Google Sheet Webhooks. Cash out rewards to any Nigerian bank once balance hits ₦150 (₦100 net + ₦50 fee).
                 </p>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Home() {
                     <strong className="text-emerald-400">₦500 Fee</strong>
                   </div>
                   <div className="flex justify-between py-1 border-b border-gray-800/60">
-                    <span className="text-gray-300">Tester Cashout (₦100 – ₦9,999)</span>
+                    <span className="text-gray-300">Tester Cashout (₦150 – ₦9,999)</span>
                     <strong className="text-amber-400">₦50 Fee</strong>
                   </div>
                   <div className="flex justify-between py-1">

@@ -76,7 +76,7 @@ export default function Footer() {
             </p>
             <div className="p-3 bg-[#011438] border border-[#025BE5]/30 rounded-xl text-slate-300 flex items-center justify-between">
               <span>Minimum Payout Threshold:</span>
-              <span className="font-bold text-[#029FFC] text-sm">₦100 Naira</span>
+              <span className="font-bold text-[#029FFC] text-sm">₦150 Naira</span>
             </div>
           </div>
 
