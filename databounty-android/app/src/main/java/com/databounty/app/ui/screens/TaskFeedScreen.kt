@@ -142,10 +142,12 @@ fun TaskCardItem(
     hasSubmitted: Boolean = false,
     onClick: () -> Unit
 ) {
+    val takenSpots = task.completedSpots + task.pendingSpots + task.reservedSpots
+    val isCapacityReached = takenSpots >= task.totalSpots || task.completedSpots >= task.totalSpots
     val progress = (task.completedSpots.toFloat() / task.totalSpots.toFloat()).coerceIn(0f, 1f)
     val isEligible = (task.targetState.equals("All", ignoreCase = true) || task.targetState.equals(user.state, ignoreCase = true)) &&
             (task.targetGender.equals("All", ignoreCase = true) || task.targetGender.equals(user.gender, ignoreCase = true))
-    val isClickable = isEligible && !hasSubmitted
+    val isClickable = isEligible && !hasSubmitted && !isCapacityReached
 
     Card(
         modifier = Modifier
@@ -192,6 +194,20 @@ fun TaskCardItem(
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TealAccent,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    } else if (isCapacityReached) {
+                        Surface(
+                            color = Color(0xFFF59E0B).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B))
+                        ) {
+                            Text(
+                                text = "All Spots Filled",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFF59E0B),
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }

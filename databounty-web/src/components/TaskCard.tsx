@@ -117,7 +117,11 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
 
         <button
           disabled={isFull || isCapacityReached || !isEligible}
-          onClick={() => onSelectTask(task)}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isFull || isCapacityReached || !isEligible) return;
+            onSelectTask(task);
+          }}
           className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
             isFull
               ? 'bg-slate-800 text-slate-500 cursor-not-allowed'

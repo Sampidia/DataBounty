@@ -102,7 +102,8 @@ export default function TasksPage() {
     if (categoryFilter !== 'all' && task.category !== categoryFilter) return false;
 
     if (statusFilter !== 'all') {
-      const isCompleted = task.status === 'completed' || task.completedSpots >= task.totalSpots;
+      const takenSpots = task.completedSpots + (task.pendingSpots || 0) + (task.reservedSpots || 0);
+      const isCompleted = task.status === 'completed' || task.completedSpots >= task.totalSpots || takenSpots >= task.totalSpots;
       if (statusFilter === 'active' && isCompleted) return false;
       if (statusFilter === 'completed' && !isCompleted) return false;
     }
@@ -130,6 +131,16 @@ export default function TasksPage() {
       openAuthModal('tester');
       return;
     }
+
+    const pendingCount = task.pendingSpots || 0;
+    const reservedCount = task.reservedSpots || 0;
+    const takenSpots = task.completedSpots + pendingCount + reservedCount;
+
+    if (task.completedSpots >= task.totalSpots || takenSpots >= task.totalSpots) {
+      alert('All spots for this bounty campaign are currently claimed or pending review. Please try again later if a spot becomes available!');
+      return;
+    }
+
     setSelectedTask(task);
     setTimerSeconds(1800); // 30 minutes reservation timer
     setIsTimerRunning(true);

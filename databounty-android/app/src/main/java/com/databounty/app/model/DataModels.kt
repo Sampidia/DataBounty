@@ -74,6 +74,7 @@ data class BountyTask(
     val totalSpots: Int,
     val completedSpots: Int,
     val reservedSpots: Int = 0,
+    val pendingSpots: Int = 0,
     val targetCountry: String = "Nigeria",
     val targetState: String = "All",
     val targetGender: String = "All",
