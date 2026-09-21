@@ -103,6 +103,8 @@ export interface BountyTask {
   targetCountry: 'Nigeria';
   targetState: 'All' | NigerianState | string;
   targetGender: 'All' | 'Male' | 'Female';
+  targetDeviceType?: 'All' | DeviceType | string;
+  targetOsVersion?: 'All' | string;
   // Google Form Verification Option
   googleFormVerificationType?: 'option1_webhook' | 'option2_manual';
   webhookSecret?: string;

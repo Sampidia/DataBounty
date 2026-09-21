@@ -78,6 +78,8 @@ data class BountyTask(
     val targetCountry: String = "Nigeria",
     val targetState: String = "All",
     val targetGender: String = "All",
+    val targetDeviceType: String = "All",
+    val targetOsVersion: String = "All",
     val verificationType: VerificationType = VerificationType.OPTION1_WEBHOOK,
     val googleFormVerificationType: String? = null,
     val webhookSecret: String? = null,

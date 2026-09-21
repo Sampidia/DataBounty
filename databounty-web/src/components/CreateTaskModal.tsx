@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { NIGERIAN_STATES, TaskCategory, BountyTask, calculateCreatorFee } from '@/lib/types';
+import { NIGERIAN_STATES, TaskCategory, BountyTask, calculateCreatorFee, DeviceType, POPULAR_OS_VERSIONS } from '@/lib/types';
 import { useAuth } from '@/lib/AuthContext';
 import { X, CheckCircle2, ShieldCheck, Code, Globe, Smartphone, FileSpreadsheet, Sparkles, Wallet, CreditCard, ArrowRight, Copy, Check } from 'lucide-react';
 
@@ -33,6 +33,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
   const [targetCountry] = useState<'Nigeria'>('Nigeria');
   const [targetState, setTargetState] = useState<string>('All');
   const [targetGender, setTargetGender] = useState<'All' | 'Male' | 'Female'>('All');
+  const [targetDeviceType, setTargetDeviceType] = useState<string>('All');
+  const [targetOsVersion, setTargetOsVersion] = useState<string>('All');
 
   // Payment Option selection
   const [paymentOption, setPaymentOption] = useState<'wallet' | 'flutterwave' | 'split'>('flutterwave');
@@ -60,6 +62,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       setTestInstructions('');
       setTargetState('All');
       setTargetGender('All');
+      setTargetDeviceType('All');
+      setTargetOsVersion('All');
       setPaymentOption('flutterwave');
       setIsProcessing(false);
       setIsPublishSuccess(false);
@@ -146,6 +150,8 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
       targetCountry,
       targetState,
       targetGender,
+      targetDeviceType,
+      targetOsVersion,
       creatorFeePaid: creatorFee,
       totalBudget,
       createdAt: new Date().toISOString()
@@ -594,6 +600,51 @@ export default function CreateTaskModal({ isOpen, onClose, onTaskCreated }: Crea
                       <option value="All">All Genders (Default)</option>
                       <option value="Male">Male Testers Only</option>
                       <option value="Female">Female Testers Only</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Device Specification Target */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#025BE5]/20">
+                  {/* Device Type Target */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+                      Target Device Type
+                    </label>
+                    <select
+                      value={targetDeviceType}
+                      onChange={(e) => {
+                        const newType = e.target.value;
+                        setTargetDeviceType(newType);
+                        setTargetOsVersion('All');
+                      }}
+                      className="w-full bg-[#031F51] border border-[#025BE5]/30 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                    >
+                      <option value="All">All Device Types (Default)</option>
+                      <option value="Android">🤖 Android Devices</option>
+                      <option value="iPhone">🍎 iPhones (iOS)</option>
+                      <option value="PC">🖥 PC / Desktop</option>
+                      <option value="Tablet">📱 Tablets</option>
+                    </select>
+                  </div>
+
+                  {/* OS Version Target */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+                      Target OS Version
+                    </label>
+                    <select
+                      value={targetOsVersion}
+                      onChange={(e) => setTargetOsVersion(e.target.value)}
+                      className="w-full bg-[#031F51] border border-[#025BE5]/30 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#029FFC]"
+                    >
+                      <option value="All">All OS Versions (Default)</option>
+                      {targetDeviceType !== 'All' &&
+                        POPULAR_OS_VERSIONS[targetDeviceType as DeviceType]?.map((os) => (
+                          <option key={os} value={os}>
+                            {os}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>

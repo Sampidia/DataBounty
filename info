@@ -6,7 +6,7 @@ Github: https://github.com/Sampidia/DataBounty.git
 
 step 1: git init
 step 2: git add .
-step 3: git commit -am  "Initial Version 0.2.18"
+step 3: git commit -am  "Initial Version 0.2.19"
 step 4: git remote add origin https://github.com/Sampidia/DataBounty.git
 step 5: git push origin master
 
@@ -20,6 +20,10 @@ To deploy Firestor rule;
 npx firebase deploy --only firestore:rules
 
 npx firebase-tools deploy --only firestore:rules
+
+To clean Firebase:
+npx firebase-tools firestore:delete --all-collections --project databounty-98868
+
 
 
 Test form: https://docs.google.com/forms/d/e/1FAIpQLSeqANKWuOvKy76hAz0b-CLc7QEHfn88mrPWoewTXwU1VboLdA/viewform?usp=header

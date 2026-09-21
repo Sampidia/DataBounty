@@ -82,6 +82,13 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
               Auto Payout
             </span>
           )}
+          {task.targetDeviceType && task.targetDeviceType !== 'All' && (
+            <span className="px-2 py-0.5 rounded bg-[#011438] border border-[#025BE5]/30 text-[10px] text-slate-300 flex items-center gap-1">
+              <Smartphone className="w-3 h-3 text-[#029FFC]" />
+              {task.targetDeviceType}
+              {task.targetOsVersion && task.targetOsVersion !== 'All' ? ` (${task.targetOsVersion})` : ''}
+            </span>
+          )}
         </div>
       </div>
 
