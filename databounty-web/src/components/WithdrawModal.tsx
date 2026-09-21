@@ -37,6 +37,7 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
   const [invalidDetailsError, setInvalidDetailsError] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [showInsufficientFundsPopup, setShowInsufficientFundsPopup] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -106,6 +107,8 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     if (amount < 100) {
       setErrorMsg('Minimum withdrawal threshold is ₦100 Naira.');
       return;
@@ -118,6 +121,9 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
       setErrorMsg('invalid withdrawal details');
       return;
     }
+
+    setIsSubmitting(true);
+    setErrorMsg('');
 
     const newWd: WithdrawalRequest = {
       id: `wd_${Date.now()}`,
@@ -142,10 +148,12 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
     } catch (err: any) {
       firestoreError = err?.message || 'Network error saving withdrawal request.';
       console.error('[WithdrawModal] Firestore write FAILED:', err);
+    } finally {
+      setIsSubmitting(false);
     }
 
     if (firestoreError) {
-      setErrorMsg(`⚠️ Withdrawal request could not be saved: ${firestoreError}`);
+      setErrorMsg(`⚠️ Withdrawal request could not be processed: ${firestoreError}`);
       return;
     }
 
@@ -412,10 +420,20 @@ export default function WithdrawModal({ isOpen, onClose, user, onWithdrawSubmitt
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
+              disabled={isSubmitting || amount > user.walletBalance}
+              className="w-full py-3 bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span>Confirm Withdrawal of ₦{netPayoutAmount.toLocaleString()}</span>
-              <ArrowRight className="w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Cashout...</span>
+                </>
+              ) : (
+                <>
+                  <span>Confirm Withdrawal of ₦{netPayoutAmount.toLocaleString()}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
 
           </form>

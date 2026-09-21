@@ -31,38 +31,54 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check user balance first
-    const userSnap = await adminDb.collection('users').doc(wd.userId).get();
-    if (!userSnap.exists) {
-      return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
-    }
-
-    const currentBalance = userSnap.data()?.walletBalance || 0;
-    if (currentBalance < wd.amount) {
-      return NextResponse.json({ error: 'Insufficient wallet balance' }, { status: 400 });
-    }
-
-    // 1. Save withdrawal document
     const wdId = wd.id || `wd_${Date.now()}`;
-    await adminDb.collection('withdrawals').doc(wdId).set({
-      ...wd,
-      id: wdId,
-      status: 'PENDING',
-      requestedAt: wd.requestedAt || new Date().toISOString()
-    });
+    let newBalance = 0;
 
-    // 2. Debit wallet balance
-    await adminDb.collection('users').doc(wd.userId).update({
-      walletBalance: FieldValue.increment(-wd.amount)
+    // Execute atomic transaction for balance check, duplicate check, and debit
+    await adminDb.runTransaction(async (transaction) => {
+      const userRef = adminDb.collection('users').doc(wd.userId);
+      const userSnap = await transaction.get(userRef);
+
+      if (!userSnap.exists) {
+        throw new Error('User profile not found');
+      }
+
+      const currentBalance = userSnap.data()?.walletBalance || 0;
+      if (currentBalance < wd.amount || currentBalance <= 0) {
+        throw new Error(`Insufficient wallet balance. Available: ₦${currentBalance}, Requested: ₦${wd.amount}`);
+      }
+
+      const wdRef = adminDb.collection('withdrawals').doc(wdId);
+      const wdSnap = await transaction.get(wdRef);
+      if (wdSnap.exists) {
+        throw new Error('Duplicate withdrawal request detected.');
+      }
+
+      newBalance = currentBalance - wd.amount;
+      if (newBalance < 0) {
+        throw new Error('Insufficient wallet balance');
+      }
+
+      // 1. Atomically update wallet balance
+      transaction.update(userRef, { walletBalance: newBalance });
+
+      // 2. Atomically save withdrawal document
+      transaction.set(wdRef, {
+        ...wd,
+        id: wdId,
+        status: 'PENDING',
+        requestedAt: wd.requestedAt || new Date().toISOString()
+      });
     });
 
     return NextResponse.json({
       success: true,
       message: 'Withdrawal request created and wallet debited.',
-      withdrawalId: wdId
+      withdrawalId: wdId,
+      newBalance
     });
   } catch (err: any) {
     console.error('[Withdrawal Create API Error]', err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Withdrawal processing failed' }, { status: 400 });
   }
 }
