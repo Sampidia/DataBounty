@@ -154,6 +154,7 @@ export function AuthModal() {
   const [devices, setDevices] = useState<DeviceSpec[]>([emptyDevice()]);
 
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
 
@@ -171,6 +172,7 @@ export function AuthModal() {
   React.useEffect(() => {
     setStep(0);
     setErrorMsg('');
+    setSuccessMsg('');
   }, [isSignUp, activeTab]);
 
   // Suspension notice
