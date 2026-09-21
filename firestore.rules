@@ -10,10 +10,10 @@ service cloud.firestore {
         && !('escrowBalance' in request.resource.data);
     }
 
-    // Tasks: any authenticated user can read; logged-in users can create;
+    // Tasks: public read access; logged-in users can create;
     // Only creator can update most fields; any authed user can update spot counters only
     match /tasks/{taskId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create: if request.auth != null;
       // Creator can update/delete anything
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.creatorId;

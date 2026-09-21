@@ -11,18 +11,38 @@ import { useAuth } from '@/lib/AuthContext';
 import { fetchTasksFromFirestore } from '@/lib/store';
 import { UserRole, BountyTask } from '@/lib/types';
 import { ArrowRight, ShieldCheck, FileSpreadsheet, Smartphone, Globe, CheckCircle2, Wallet, Users, Zap, Mail, BarChart3, AlertCircle } from 'lucide-react';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export default function Home() {
-  const { user: authUser, updateUser } = useAuth();
+  const { user: authUser, isAuthenticated, openAuthModal, updateUser } = useAuth();
   const [userRole, setUserRole] = useState<UserRole>('tester');
   const [tasks, setTasks] = useState<BountyTask[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchTasksFromFirestore().then((loaded) => {
-      if (loaded) setTasks(loaded);
-    });
+    const tasksRef = collection(db, 'tasks');
+    const unsubscribe = onSnapshot(
+      tasksRef,
+      (snap) => {
+        if (!snap.empty) {
+          const loaded = snap.docs.map((d) => ({ id: d.id, ...d.data() } as BountyTask));
+          loaded.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          setTasks(loaded);
+        } else {
+          setTasks([]);
+        }
+      },
+      (err) => {
+        console.warn('[HomePage] Real-time tasks snapshot error:', err);
+        fetchTasksFromFirestore().then((loaded) => {
+          if (loaded) setTasks(loaded);
+        });
+      }
+    );
+
+    return () => unsubscribe();
   }, []);
 
   const activeUser = authUser || {
@@ -173,6 +193,11 @@ export default function Home() {
                   key={task.id}
                   task={task}
                   onSelectTask={() => {
+                    if (!isAuthenticated) {
+                      alert('Authentication required: Please sign in or register to claim bounties.');
+                      openAuthModal('tester');
+                      return;
+                    }
                     window.location.href = '/tasks';
                   }}
                   userState={activeUser.state}
