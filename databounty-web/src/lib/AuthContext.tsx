@@ -153,9 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           gender: 'Female',
           country: 'Nigeria',
           state: 'Lagos',
-          deviceBrand: 'Android Device',
-          deviceModel: 'Generic Mobile',
-          osVersion: 'Android 14',
           bankName: '',
           accountNumber: '',
           accountName: email.split('@')[0].toUpperCase(),
@@ -174,32 +171,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('databounty_auth_user');
         throw err;
       }
-      // Fallback for local testing if Firebase auth is unconfigured
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-        throw new Error('Invalid credentials or user account not found. Please register first.');
+        throw new Error('Invalid credentials or account not found. Please register first.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        throw new Error('This email address is already registered. Please sign in instead.');
+      } else if (err.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. Please use at least 6 characters.');
       } else {
-        // Fallback profile creation with 0 balance
-        const localUser: UserProfile = {
-          id: `usr_${Date.now()}`,
-          name: email.split('@')[0],
-          email: email,
-          phone: '+2348000000000',
-          gender: 'Female',
-          country: 'Nigeria',
-          state: 'Lagos',
-          deviceBrand: 'Samsung',
-          deviceModel: 'Galaxy',
-          osVersion: 'Android 14',
-          bankName: '',
-          accountNumber: '',
-          accountName: email.split('@')[0].toUpperCase(),
-          walletBalance: 0,
-          escrowBalance: 0,
-          role: targetRole === 'admin' ? 'tester' : targetRole,
-        };
-        setUser(localUser);
-        localStorage.setItem('databounty_auth_user', JSON.stringify(localUser));
-        setIsAuthModalOpen(false);
+        throw new Error(err.message || 'Authentication failed. Please check your credentials.');
       }
     }
   };
@@ -239,9 +218,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       await setDoc(doc(db, 'users', cred.user.uid), newProfile);
-      setUser(newProfile);
-      localStorage.setItem('databounty_auth_user', JSON.stringify(newProfile));
-      setIsAuthModalOpen(false);
+
+      // Sign out immediately so user explicitly signs in via Login tab
+      await firebaseSignOut(auth);
+      setUser(null);
+      localStorage.removeItem('databounty_auth_user');
 
       // Trigger welcome email notification (non-blocking)
       fetch('/api/email/welcome', {
@@ -254,26 +235,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
       }).catch((err) => console.warn('[Welcome Email Send Warning]', err));
     } catch (err: any) {
-      // Local fallback creation with 0 balance
-      const newProfile: UserProfile = {
-        id: `usr_${Date.now()}`,
-        name: name || email.split('@')[0],
-        email: email,
-        phone,
-        gender,
-        country: 'Nigeria',
-        state,
-        devices: devices ?? [],
-        bankName: '',
-        accountNumber: '',
-        accountName: (name || email.split('@')[0]).toUpperCase(),
-        walletBalance: 0, // MUST start at 0
-        escrowBalance: 0,
-        role: safeRole,
-      };
-      setUser(newProfile);
-      localStorage.setItem('databounty_auth_user', JSON.stringify(newProfile));
-      setIsAuthModalOpen(false);
+      if (err.code === 'auth/email-already-in-use') {
+        throw new Error('This email address is already registered. Please sign in instead.');
+      } else if (err.code === 'auth/weak-password') {
+        throw new Error('Password is too weak. Please use at least 6 characters.');
+      } else if (err.code === 'auth/invalid-email') {
+        throw new Error('Please enter a valid email address.');
+      } else {
+        throw new Error(err.message || 'Registration failed. Please check your details and try again.');
+      }
     }
   };
 

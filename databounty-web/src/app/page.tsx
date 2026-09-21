@@ -225,6 +225,7 @@ export default function Home() {
                   }}
                   userState={activeUser.state}
                   userGender={activeUser.gender}
+                  userId={activeUser.id}
                 />
               ))}
             </div>

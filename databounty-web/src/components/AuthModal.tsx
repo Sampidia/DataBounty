@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 import { DeviceSpec, DeviceType, NIGERIAN_STATES, POPULAR_OS_VERSIONS, UserRole } from '@/lib/types';
 import {
-  X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle,
+  X, UserCheck, Briefcase, Lock, Mail, User, Sparkles, AlertCircle, CheckCircle2,
   Eye, EyeOff, MapPin, Smartphone, Plus, Trash2, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
@@ -281,10 +281,14 @@ export function AuthModal() {
           return;
         }
         await signup(email, password, activeTab, name);
+        setSuccessMsg('Registration successful! Your account has been created. Please log in below.');
+        setIsSignUp(false);
+        setPassword('');
+        setStep(0);
       } else {
         await login(email, password, activeTab);
+        if (activeTab === 'creator') router.push('/creator');
       }
-      if (activeTab === 'creator') router.push('/creator');
     } catch (err: any) {
       if (err.name === 'ACCOUNT_SUSPENDED' || err.message === 'ACCOUNT_SUSPENDED') {
         setIsSuspended(true);
@@ -315,6 +319,10 @@ export function AuthModal() {
     setIsSubmitting(true);
     try {
       await signup(email, password, activeTab, name, { gender, state: stateVal, phone }, devices);
+      setSuccessMsg('Registration successful! Account created. Please log in below.');
+      setIsSignUp(false);
+      setPassword('');
+      setStep(0);
     } catch (err: any) {
       setErrorMsg(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -417,6 +425,14 @@ export function AuthModal() {
             </div>
           ) : (
             <>
+              {/* Success Alert Banner */}
+              {successMsg && (
+                <div className="p-3 mb-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-2 text-xs text-emerald-300 animate-in fade-in duration-200">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
+
               {/* Error */}
               {errorMsg && (
                 <div className="p-3 mb-4 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2 text-xs text-red-300">

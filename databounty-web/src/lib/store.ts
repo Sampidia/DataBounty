@@ -159,28 +159,36 @@ export async function submitTaskProofToFirestore(submission: TaskSubmission): Pr
   }
 }
 
-export async function reserveTaskSpotInFirestore(taskId: string): Promise<void> {
+export async function reserveTaskSpotInFirestore(taskId: string, userId?: string): Promise<void> {
   try {
     const res = await fetch('/api/tasks/reserve', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId }),
+      body: JSON.stringify({ taskId, userId }),
     });
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Reserve failed');
+    }
+    if (typeof window !== 'undefined' && userId) {
+      const expiresAt = Date.now() + 1800 * 1000; // 30 mins in ms
+      localStorage.setItem(`databounty_reservation_${userId}_${taskId}`, JSON.stringify({
+        taskId,
+        userId,
+        expiresAt,
+      }));
     }
   } catch (err) {
     console.warn('[API] reserveTaskSpot error:', err);
   }
 }
 
-export async function releaseTaskSpotInFirestore(taskId: string): Promise<void> {
+export async function releaseTaskSpotInFirestore(taskId: string, userId?: string): Promise<void> {
   try {
     const res = await fetch('/api/tasks/release', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ taskId }),
+      body: JSON.stringify({ taskId, userId }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -188,6 +196,10 @@ export async function releaseTaskSpotInFirestore(taskId: string): Promise<void> 
     }
   } catch (err) {
     console.warn('[API] releaseTaskSpot error:', err);
+  } finally {
+    if (typeof window !== 'undefined' && userId) {
+      localStorage.removeItem(`databounty_reservation_${userId}_${taskId}`);
+    }
   }
 }
 

@@ -7,9 +7,30 @@ interface TaskCardProps {
   onSelectTask: (task: BountyTask) => void;
   userState?: string;
   userGender?: string;
+  userId?: string;
 }
 
-export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female' }: TaskCardProps) {
+export default function TaskCard({ task, onSelectTask, userState = 'Lagos', userGender = 'Female', userId }: TaskCardProps) {
+  const [activeReservationSecs, setActiveReservationSecs] = React.useState<number | null>(null);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && userId) {
+      const key = `databounty_reservation_${userId}_${task.id}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          const rem = Math.max(0, Math.floor((parsed.expiresAt - Date.now()) / 1000));
+          if (rem > 0) {
+            setActiveReservationSecs(rem);
+          } else {
+            localStorage.removeItem(key);
+          }
+        } catch (e) {}
+      }
+    }
+  }, [userId, task.id]);
+
   const takenSpots = task.completedSpots + (task.pendingSpots || 0) + (task.reservedSpots || 0);
   const percentage = Math.min(100, Math.round((task.completedSpots / task.totalSpots) * 100));
   const takenPercentage = Math.min(100, Math.round((takenSpots / task.totalSpots) * 100));
@@ -17,11 +38,14 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
   const pendingCount = task.pendingSpots || 0;
   const reservedCount = task.reservedSpots || 0;
   const isCapacityReached = takenSpots >= task.totalSpots;
+  const hasActiveReservation = activeReservationSecs !== null && activeReservationSecs > 0;
 
   // Eligibility check
   const isStateEligible = task.targetState === 'All' || task.targetState === userState;
   const isGenderEligible = task.targetGender === 'All' || task.targetGender === userGender;
   const isEligible = isStateEligible && isGenderEligible;
+
+  const isDisabled = !hasActiveReservation && (isFull || isCapacityReached || !isEligible);
 
   return (
     <div className={`glass-card rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bg-[#031F51] border border-[#025BE5]/30 ${
@@ -133,14 +157,16 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
         </div>
 
         <button
-          disabled={isFull || isCapacityReached || !isEligible}
+          disabled={isDisabled}
           onClick={(e) => {
             e.stopPropagation();
-            if (isFull || isCapacityReached || !isEligible) return;
+            if (isDisabled) return;
             onSelectTask(task);
           }}
           className={`w-full py-2.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-            isFull
+            hasActiveReservation
+              ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-[#029FFC] text-white shadow-lg shadow-amber-500/20 animate-pulse hover:scale-[1.01]'
+              : isFull
               ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
               : isCapacityReached
               ? 'bg-slate-800/80 text-amber-300 border border-amber-500/30 cursor-not-allowed'
@@ -149,7 +175,9 @@ export default function TaskCard({ task, onSelectTask, userState = 'Lagos', user
               : 'bg-gradient-to-r from-[#025BE5] via-[#0379FA] to-[#029FFC] hover:opacity-95 text-white shadow-md hover:scale-[1.01]'
           }`}
         >
-          {isFull ? (
+          {hasActiveReservation ? (
+            `Resume Bounty Task ⏱ (${Math.floor((activeReservationSecs || 0) / 60)}m ${(activeReservationSecs || 0) % 60}s)`
+          ) : isFull ? (
             'Bounty Completed'
           ) : isCapacityReached ? (
             'All Spots Filled (Pending Review)'

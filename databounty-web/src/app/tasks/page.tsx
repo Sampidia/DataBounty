@@ -88,11 +88,11 @@ export default function TasksPage() {
     } else if (timerSeconds === 0) {
       setIsTimerRunning(false);
       if (selectedTask?.id && !hasSubmittedRef.current) {
-        releaseTaskSpotInFirestore(selectedTask.id);
+        releaseTaskSpotInFirestore(selectedTask.id, user?.id);
       }
     }
     return () => clearInterval(timer);
-  }, [isTimerRunning, timerSeconds, selectedTask?.id]);
+  }, [isTimerRunning, timerSeconds, selectedTask?.id, user?.id]);
 
   const filteredTasks = tasks.filter((task) => {
     if (task.status === 'suspended') return false;
@@ -130,10 +130,34 @@ export default function TasksPage() {
   });
 
   const handleOpenTask = (task: BountyTask) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       alert('Authentication required: Please sign in or register to claim bounties.');
       openAuthModal('tester');
       return;
+    }
+
+    hasSubmittedRef.current = false;
+    setSelectedTask(task);
+
+    // Check for existing active reservation in localStorage
+    if (typeof window !== 'undefined' && user.id) {
+      const key = `databounty_reservation_${user.id}_${task.id}`;
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          const rem = Math.max(0, Math.floor((parsed.expiresAt - Date.now()) / 1000));
+          if (rem > 0) {
+            setTimerSeconds(rem);
+            setIsTimerRunning(true);
+            setSecretCode('');
+            setProofUrl('');
+            return;
+          } else {
+            localStorage.removeItem(key);
+          }
+        } catch (e) {}
+      }
     }
 
     const pendingCount = task.pendingSpots || 0;
@@ -145,19 +169,22 @@ export default function TasksPage() {
       return;
     }
 
-    hasSubmittedRef.current = false;
-    setSelectedTask(task);
     setTimerSeconds(1800); // 30 minutes reservation timer
     setIsTimerRunning(true);
     setSecretCode('');
     setProofUrl('');
-    reserveTaskSpotInFirestore(task.id);
+    reserveTaskSpotInFirestore(task.id, user.id);
   };
 
   const handleCloseTaskModal = (isSubmitted?: boolean | React.SyntheticEvent) => {
     const didSubmit = isSubmitted === true || hasSubmittedRef.current;
-    if (selectedTask?.id && timerSeconds > 0 && !didSubmit) {
-      releaseTaskSpotInFirestore(selectedTask.id);
+    if (selectedTask?.id && user?.id) {
+      if (didSubmit) {
+        releaseTaskSpotInFirestore(selectedTask.id, user.id);
+      } else if (timerSeconds <= 0) {
+        releaseTaskSpotInFirestore(selectedTask.id, user.id);
+      }
+      // Note: If user closes modal while timer is running, keep reservation in localStorage so they can resume
     }
     setSelectedTask(null);
     setIsTimerRunning(false);
@@ -382,6 +409,7 @@ export default function TasksPage() {
                   onSelectTask={handleOpenTask}
                   userState={userState}
                   userGender={userGender}
+                  userId={user?.id}
                 />
               ))}
             </div>
