@@ -168,12 +168,15 @@ export function AuthModal() {
     }
   }, [authModalRole, isAuthModalOpen]);
 
-  // Reset multi-step state when switching between sign-in / sign-up or tabs
+  // Reset multi-step state when switching tabs or forms, preserving successMsg on sign-up completion
   React.useEffect(() => {
     setStep(0);
     setErrorMsg('');
-    setSuccessMsg('');
   }, [isSignUp, activeTab]);
+
+  React.useEffect(() => {
+    setSuccessMsg('');
+  }, [activeTab, isAuthModalOpen]);
 
   // Suspension notice
   React.useEffect(() => {
@@ -429,9 +432,19 @@ export function AuthModal() {
             <>
               {/* Success Alert Banner */}
               {successMsg && (
-                <div className="p-3 mb-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-start gap-2 text-xs text-emerald-300 animate-in fade-in duration-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>{successMsg}</span>
+                <div className="p-4 mb-5 bg-gradient-to-r from-emerald-950/80 via-[#011438] to-emerald-950/80 border border-emerald-500/40 rounded-2xl flex items-start gap-3 text-xs text-emerald-200 shadow-xl shadow-emerald-500/10 animate-in zoom-in-95 duration-200">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 shadow-inner mt-0.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-400 animate-pulse" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <h4 className="font-extrabold text-white text-sm tracking-tight flex items-center gap-1.5">
+                      <span>Account Created Successfully!</span>
+                      <Sparkles className="w-3.5 h-3.5 text-yellow-400 animate-bounce" />
+                    </h4>
+                    <p className="text-slate-300 text-xs leading-relaxed">
+                      {successMsg}
+                    </p>
+                  </div>
                 </div>
               )}
 
